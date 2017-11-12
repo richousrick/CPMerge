@@ -35,7 +35,8 @@ public interface PluginInterface {
 	/**
 	 * @return a list of methods read in
 	 */
-	public ArrayList<ParserRuleContext> getMethods();
+	public ArrayList<ArrayList<ParserRuleContext>> getMethods();
+	
 	
 	/**
 	 * Validates a given file on the system
@@ -48,5 +49,7 @@ public interface PluginInterface {
 	public ParserRuleContext getParsedCode();
 	
 	public HashMap<Class<? extends ParserRuleContext>, ResoultionPattern> getPatterns();
+	
+	public PluginInterface generateInstance();
 	
 }
