@@ -1,30 +1,39 @@
 package parse.parser.java;
+
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
 
+import dif.ClassNode;
 import parse.PluginInterface;
 import parse.ResoultionPattern;
 import parse.parser.java.comp.JavaLexer;
 import parse.parser.java.comp.JavaParser;
+import parse.parser.java.comp.JavaParser.BlockStatementContext;
 import parse.parser.java.comp.JavaParser.ClassBodyDeclarationContext;
 import parse.parser.java.comp.JavaParser.ClassDeclarationContext;
 import parse.parser.java.comp.JavaParser.CompilationUnitContext;
+import parse.parser.java.comp.JavaParser.MethodDeclarationContext;
 import parse.parser.java.comp.JavaParser.ModifierContext;
+import parse.parser.java.comp.JavaParser.StatementContext;
 import parse.parser.java.comp.JavaParser.TypeDeclarationContext;
+import parse.parser.java.comp.JavaParserCustomVisitor;
 
 /**
  * TODO Annotate class
+ * 
  * @author 146813
  */
-public class JavaPlugin implements PluginInterface{
+public class JavaPlugin implements PluginInterface {
 
 	private CompilationUnitContext unit;
-	
-	/* (non-Javadoc)
+
+	/*
+	 * (non-Javadoc)
 	 * @see PluginInterface#getLanguageName()
 	 */
 	@Override
@@ -32,7 +41,8 @@ public class JavaPlugin implements PluginInterface{
 		return "Java";
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
 	 * @see PluginInterface#getPluginVersion()
 	 */
 	@Override
@@ -40,28 +50,30 @@ public class JavaPlugin implements PluginInterface{
 		return "0.0.1";
 	}
 
-	
-	public void parse(CharStream stream){
+	@Override
+	public void parse(CharStream stream) {
 		JavaLexer lexer = new JavaLexer(stream);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		JavaParser parser = new JavaParser(tokens);
 		unit = parser.compilationUnit();
 	}
 
-	public String generateCode(){
+	public String generateCode() {
 		System.err.println("generateCode not implmented yet");
 		return "";
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
 	 * @see parse.PluginInterface#validfile(java.lang.String)
 	 */
 	@Override
 	public boolean validfile(String filename) {
-		return filename.substring(filename.lastIndexOf('.')+1).equalsIgnoreCase("java");
+		return filename.substring(filename.lastIndexOf('.') + 1).equalsIgnoreCase("java");
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
 	 * @see parse.PluginInterface#getPatterns()
 	 */
 	@Override
@@ -70,60 +82,92 @@ public class JavaPlugin implements PluginInterface{
 		return null;
 	}
 
-	/* (non-Javadoc)
-	 * @see parse.PluginInterface#getMethods()
-	 */
-	@Override
-	public ArrayList<ArrayList<ParserRuleContext>> getMethods() {
-		ArrayList<ArrayList<ParserRuleContext>> classMethods = new ArrayList<>();
-		
-		for(ClassDeclarationContext c: getClasses()){
-			ArrayList<ParserRuleContext> methods = new ArrayList<>();
-			MethodLoop: for(ClassBodyDeclarationContext body: c.classBody().classBodyDeclaration()){
-				for(ModifierContext m:body.getRuleContexts(ModifierContext.class)){
-					if(m.classOrInterfaceModifier()!=null && m.classOrInterfaceModifier().STATIC()!=null){
-						System.out.println("yo");
-						continue MethodLoop;
-					}
-				}
-				if(body.memberDeclaration().methodDeclaration()!=null){
-					methods.add(body.memberDeclaration().methodDeclaration());
+	public ArrayList<MethodDeclarationContext> getMethodList(ClassDeclarationContext classDeclaration) {
+		ArrayList<MethodDeclarationContext> methods = new ArrayList<>();
+		MethodLoop: for (ClassBodyDeclarationContext body : classDeclaration.classBody().classBodyDeclaration()) {
+			for (ModifierContext m : body.getRuleContexts(ModifierContext.class)) {
+				if (m.classOrInterfaceModifier() != null && m.classOrInterfaceModifier().STATIC() != null) {
+					continue MethodLoop;
 				}
 			}
-			if(!methods.isEmpty())
-				classMethods.add(methods);
+			if (body.memberDeclaration().methodDeclaration() != null) {
+				methods.add(body.memberDeclaration().methodDeclaration());
+			}
 		}
-		
-		return classMethods;
+
+		return methods;
 	}
-	
+
+	private ClassNode addChildStatements(ClassNode n) {
+		List<BlockStatementContext> blocks = null;
+		switch (n.getType()) {
+			case 0:
+				return n;
+			case 1:
+				blocks = ((MethodDeclarationContext) n.getNodeData()).methodBody().block().blockStatement();
+				break;
+			case 2:
+				for (StatementContext s : ((StatementContext) n.getNodeData()).statement()) {
+					ClassNode nt = new ClassNode(s, s.getText(), (byte) 2);
+					n.addChild(addChildStatements(nt));
+				}
+				if (((StatementContext) n.getNodeData()).block() != null) {
+					blocks = ((StatementContext) n.getNodeData()).block().blockStatement();
+				}
+				break;
+		}
+
+		if (blocks != null) {
+			for (BlockStatementContext s : blocks) {
+				if (s.localTypeDeclaration() != null) {
+					n.addChild(new ClassNode(s.localTypeDeclaration(), s.getText(), (byte) 2));
+				} else if (s.statement() != null) {
+					ClassNode nt = new ClassNode(s.statement(), s.getText(), (byte) 2);
+					n.addChild(addChildStatements(nt));
+				}
+			}
+		}
+		return n;
+	}
+
 	/**
 	 * @return A list of the classes inside the file
 	 */
-	public ArrayList<ClassDeclarationContext> getClasses(){
+	public ArrayList<ClassDeclarationContext> getClassList() {
 		ArrayList<ClassDeclarationContext> classRoots = new ArrayList<>();
 		ArrayList<ClassDeclarationContext> uncheckedRoots = new ArrayList<>();
-		
-		for(TypeDeclarationContext type : unit.typeDeclaration()){
-			if(type.classDeclaration()!=null){
+
+		for (TypeDeclarationContext type : unit.typeDeclaration()) {
+			if (type.classDeclaration() != null) {
 				uncheckedRoots.add(type.classDeclaration());
 			}
 		}
-		
-		while (!uncheckedRoots.isEmpty()){
-			for(ClassBodyDeclarationContext body: uncheckedRoots.get(0).classBody().classBodyDeclaration()){
-				if(body.memberDeclaration().classDeclaration()!=null){
+
+		while (!uncheckedRoots.isEmpty()) {
+			for (ClassBodyDeclarationContext body : uncheckedRoots.get(0).classBody().classBodyDeclaration()) {
+				if (body.memberDeclaration().classDeclaration() != null) {
 					uncheckedRoots.add(body.memberDeclaration().classDeclaration());
 				}
 			}
 			classRoots.add(uncheckedRoots.get(0));
 			uncheckedRoots.remove(0);
 		}
-		
+
 		return classRoots;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#getClasses()
+	 */
+	@Override
+	public ArrayList<ClassNode> getClasses() {
+		JavaParserCustomVisitor visitor = new JavaParserCustomVisitor();
+		return visitor.visitCompilationUnit(unit).getChildrenAsCN();
+	}
+
+	/*
+	 * (non-Javadoc)
 	 * @see parse.PluginInterface#getParsedCode()
 	 */
 	@Override
@@ -131,12 +175,13 @@ public class JavaPlugin implements PluginInterface{
 		return unit;
 	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
 	 * @see parse.PluginInterface#generateInstance()
 	 */
 	@Override
 	public PluginInterface generateInstance() {
 		return new JavaPlugin();
 	}
-	
+
 }
