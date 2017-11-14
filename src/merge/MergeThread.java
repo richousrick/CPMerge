@@ -5,40 +5,34 @@ package merge;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.List;
 
 import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.ParserRuleContext;
 
-import com.sun.javafx.scene.paint.GradientUtils.Parser;
-import com.sun.prism.impl.VertexBuffer;
-
 import dif.APTEDCostModel;
-import dif.ParserRuleContextNode;
+import dif.ClassNode;
 import distance.APTED;
 import parse.PluginInterface;
-import parse.ResoultionPattern;
-import parse.parser.java.comp.JavaParser.ClassDeclarationContext;
-import parse.parser.java.comp.JavaParser.MethodDeclarationContext;
 import ref.Helper;
 
 /**
  * @author Rikkey Paal
  *
  */
-public class MergeThread implements Runnable{
-	
+public class MergeThread implements Runnable {
+
 	private PluginInterface plugin;
 	private File f;
 	private String ThreadName;
 	private int minMatch;
 	private double minPer;
 	private double minPerDelta;
-	
+	private APTED<APTEDCostModel, ParserRuleContext> apted;
+
 	/**
 	 * 
 	 */
@@ -49,27 +43,14 @@ public class MergeThread implements Runnable{
 		this.minPerDelta = minPerDelta;
 		this.f = f;
 	}
-	
-	private ArrayList<ParserRuleContext[]> getCopies(ArrayList<ParserRuleContext> cst){
-		
-		return null;
-	}
-	
-	private boolean areMatch(ParserRuleContext p1, ParserRuleContext p2){
-		APTED<APTEDCostModel, ParserRuleContext> apted = new APTED<APTEDCostModel, ParserRuleContext>(new APTEDCostModel());
-		apted.computeEditDistance(new ParserRuleContextNode(p1), new ParserRuleContextNode(p2));
-		LinkedList<int[]> list = apted.computeEditMapping();
-		System.out.println(list.toString());
-		
-		return list.size()==0;
-	}
 
-	/* (non-Javadoc)
+	/*
+	 * (non-Javadoc)
 	 * @see java.lang.Runnable#run()
 	 */
 	@Override
 	public void run() {
-		Helper.printToSTD("Reading file",f.getName());
+		Helper.printToSTD("Reading file", f.getName());
 		CharStream contents;
 		try {
 			contents = Helper.readFile(f);
@@ -78,26 +59,73 @@ public class MergeThread implements Runnable{
 			return;
 		}
 		Helper.printToSTD("Read file, Parsing contents", f.getName());
-		
+
 		plugin.parse(contents);
 		Helper.printToSTD("File Parsed, Extracting methods", f.getName());
-		ArrayList<ArrayList<ParserRuleContext>> classMethods = plugin.getMethods();
-		
-		if(Helper.test){
-			for(ArrayList<ParserRuleContext> methods:classMethods){
-				String functionName = ((ClassDeclarationContext)methods.get(0).getParent().getParent().getParent().getParent()).IDENTIFIER().getText();
+		ArrayList<ClassNode> classMethods = plugin.getClasses();
+
+		if (Helper.test) {
+			for (ClassNode methods : classMethods) {
 				String functions = "";
-				for(ParserRuleContext p : methods){
-					functions += ((MethodDeclarationContext)p).IDENTIFIER().toString()+",";
+				for (ClassNode n : methods.getChildrenAsCN()) {
+					functions += n.getIdentifier() + ",";
 				}
-				Helper.printToSTD("Found class \""+functionName +"\" containing methods "+functions.substring(0, functions.length()-1));
+				Helper.printToSTD("Found class \"" + methods.getIdentifier() + "\" containing methods "
+						+ functions.substring(0, functions.length() - 1));
 			}
 		}
-		
+
+		Helper.printToSTD("Building costModel", f.getName());
+		// HashMap<Class<? extends ParserRuleContext>, ResoultionPattern> rules
+		// = plugin.getPatterns();
+		apted = new APTED<APTEDCostModel, ParserRuleContext>(new APTEDCostModel());
+
 		Helper.printToSTD("Methods Extracted, Searching for matches", f.getName());
-		//HashMap<Class<? extends ParserRuleContext>, ResoultionPattern> rules = plugin.getPatterns();
-		for(ArrayList<ParserRuleContext> methods: classMethods){
-			
+		for (ClassNode classNode : classMethods) {
+			processClass(classNode);
 		}
+
+	}
+
+	private void processClass(ClassNode classNode) {
+		ArrayList<ArrayList<List<int[]>>> comps = new ArrayList<>();
+		ArrayList<ClassNode> methods = classNode.getChildrenAsCN();
+		if (Helper.verbose) {
+			Helper.printToSTD("Comparing methods from " + classNode.getIdentifier(), "\n" + f.getName());
+		}
+		for (int i = 0; i < methods.size() - 1; i++) {
+			comps.add(new ArrayList<>());
+			for (int j = i + 1; j < methods.size(); j++) {
+				List<int[]> comp = compareMethods(methods.get(i), methods.get(j));
+				if (comp != null) {
+					comps.get(i).add(comp);
+				}
+			}
+		}
+
+	}
+
+	/**
+	 * TODO Annotate method
+	 * 
+	 * @param parserRuleContext
+	 * @param parserRuleContext2
+	 * @return
+	 */
+	private List<int[]> compareMethods(ClassNode method1, ClassNode method2) {
+		// optimise
+		float editDistance = apted.computeEditDistance(method1, method2) - 1;
+		int maxSize = Math.max(method1.getSize(), method2.getSize());
+		float diffValue = (maxSize - editDistance) / maxSize;
+		if (diffValue < minPer) {
+			return null;
+		}
+		Helper.printToSTD(method1.getIdentifier() + " " + method2.getIdentifier() + ": " + diffValue + "%",
+				"\t" + f.getName());
+		LinkedList<int[]> list = apted.computeEditMapping();
+		Helper.printToSTD("\t" + Arrays.deepToString(list.toArray()));
+		Helper.printToSTD(method1.print("\t", true));
+		Helper.printToSTD(method2.print("\t", true));
+		return list;
 	}
 }
