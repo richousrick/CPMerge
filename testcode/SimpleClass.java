@@ -27,7 +27,6 @@ public class SimpleClass {
 		this.str = str;
 	}
 	
-	
 	public static void main(String[] args) {
 		System.out.println("hello");
 	}
@@ -43,6 +42,16 @@ public class SimpleClass {
 		
 		public void f3(){
 			System.out.println("hi");
+		}
+		
+		public void f4(){
+			int i = 1+1;
+			int j = 5+3;
+		}
+		
+		public void f5(){
+			int j = 5+3;
+			int i = 1+1;
 		}
 	}
 }
