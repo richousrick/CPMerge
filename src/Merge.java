@@ -1,13 +1,8 @@
 import java.io.File;
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.antlr.v4.parse.ANTLRParser.throwsSpec_return;
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CharStreams;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
 import org.apache.commons.cli.DefaultParser;
@@ -165,7 +160,10 @@ public class Merge {
 	}
 
 	public static void main(String[] args) {
-		args = new String[] { "-rvl", "Java", "-p", "testcode/", "-t", "12" };
+		// args = new String[] { "-rvl", "Java", "-p", "testcode/", "-t", "12"
+		// };
+		args = new String[] { "-rvl", "Java", "-p",
+				"E:\\University\\Workspace\\CPMerge\\src\\parse\\parser\\java\\comp\\JavaParser.java", "-t", "12" };
 		Merge m = new Merge(args);
 	}
 

@@ -5,16 +5,14 @@ import java.util.ArrayList;
 import org.antlr.v4.runtime.tree.RuleNode;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
-import com.sun.org.apache.regexp.internal.recompile;
-
 import dif.ClassNode;
 import parse.parser.java.comp.JavaParser.ArrayInitializerContext;
 import parse.parser.java.comp.JavaParser.BlockContext;
 import parse.parser.java.comp.JavaParser.BlockStatementContext;
 import parse.parser.java.comp.JavaParser.CatchClauseContext;
-import parse.parser.java.comp.JavaParser.ClassBodyContext;
 import parse.parser.java.comp.JavaParser.ClassBodyDeclarationContext;
 import parse.parser.java.comp.JavaParser.ClassDeclarationContext;
+import parse.parser.java.comp.JavaParser.ClassOrInterfaceTypeContext;
 import parse.parser.java.comp.JavaParser.ClassTypeContext;
 import parse.parser.java.comp.JavaParser.CompilationUnitContext;
 import parse.parser.java.comp.JavaParser.ExplicitGenericInvocationContext;
@@ -35,6 +33,7 @@ import parse.parser.java.comp.JavaParser.StatementContext;
 import parse.parser.java.comp.JavaParser.SuperSuffixContext;
 import parse.parser.java.comp.JavaParser.TypeDeclarationContext;
 import parse.parser.java.comp.JavaParser.TypeTypeContext;
+import parse.parser.java.comp.JavaParser.TypeTypeOrVoidContext;
 import parse.parser.java.comp.JavaParser.VariableDeclaratorContext;
 import parse.parser.java.comp.JavaParser.VariableInitializerContext;
 
@@ -394,7 +393,7 @@ public class JavaParserCustomVisitor extends JavaParserBaseVisitor<ClassNode> {
 			}
 			return node;
 		} else if (ctx.getChild(0) instanceof TypeTypeContext) {
-
+			ClassNode cn = new ClassNode(ctx, "expression")
 		} else if (ctx.getChild(0) instanceof TerminalNodeImpl) {
 
 		} else if (ctx.getChild(0) instanceof ClassTypeContext) {
@@ -403,7 +402,7 @@ public class JavaParserCustomVisitor extends JavaParserBaseVisitor<ClassNode> {
 
 		}
 
-		return super.visitChildren(ctx);
+		return visitChildren(ctx);
 	}
 
 	/*
@@ -414,9 +413,21 @@ public class JavaParserCustomVisitor extends JavaParserBaseVisitor<ClassNode> {
 	 */
 	@Override
 	public ClassNode visitChildren(RuleNode arg0) {
-		System.err.println("unimplmented stucture " + arg0.getText());
+		System.out.println("");
+		System.err.println("unimplmented stucture " + arg0.toStringTree());
 		return super.visitChildren(arg0);
 	}
+
+	// private String getChildrenType(RuleNode arg0) {
+	// String retString = "";
+	// for (int i = 0; i < arg0.getChildCount(); i++) {
+	// retString += " ";
+	// ParseTree child = arg0.getChild(i);
+	// if(child.getText().matches("\\d+")){
+	//
+	// }
+	// }
+	// }
 
 	/*
 	 * (non-Javadoc)
@@ -451,24 +462,57 @@ public class JavaParserCustomVisitor extends JavaParserBaseVisitor<ClassNode> {
 	/*
 	 * (non-Javadoc)
 	 * @see
+	 * parse.parser.java.comp.JavaParserBaseVisitor#visitClassOrInterfaceType(
+	 * parse.parser.java.comp.JavaParser.ClassOrInterfaceTypeContext)
+	 */
+	@Override
+	public ClassNode visitClassOrInterfaceType(ClassOrInterfaceTypeContext ctx) {
+		return super.visitClassOrInterfaceType(ctx);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see
 	 * parse.parser.java.comp.JavaParserBaseVisitor#visitPrimary(parse.parser.
 	 * java.comp.JavaParser.PrimaryContext)
 	 */
 	@Override
 	public ClassNode visitPrimary(PrimaryContext ctx) {
-		if (ctx.IDENTIFIER() != null) {
-			return new ClassNode(ctx, ctx.IDENTIFIER().getText());
+		if (ctx.nonWildcardTypeArguments() != null) {
+			return visitChildren(ctx);
+		} else if (ctx.expression() != null) {
+			return visitExpression(ctx.expression());
 		} else if (ctx.THIS() != null) {
 			return new ClassNode(ctx, ctx.THIS().getText());
 		} else if (ctx.SUPER() != null) {
 			return new ClassNode(ctx, ctx.SUPER().getText());
-		} else if (ctx.THIS() != null) {
-			return new ClassNode(ctx, ctx.IDENTIFIER().getText());
 		} else if (ctx.literal() != null) {
 			return visitLiteral(ctx.literal());
+		} else if (ctx.IDENTIFIER() != null) {
+			return new ClassNode(ctx, ctx.IDENTIFIER().getText());
+		} else if (ctx.CLASS() != null) {
+			ClassNode cn = visitTypeTypeOrVoid(ctx.typeTypeOrVoid());
+			cn.addChild(new ClassNode(null, ".CLASS"));
+			return cn;
+		} else {
+			System.err.println("Undefined PrimaryContext structure");
+			return super.visitPrimary(ctx);
 		}
+	}
 
-		return super.visitPrimary(ctx);
+	/*
+	 * (non-Javadoc)
+	 * @see
+	 * parse.parser.java.comp.JavaParserBaseVisitor#visitTypeTypeOrVoid(parse.
+	 * parser.java.comp.JavaParser.TypeTypeOrVoidContext)
+	 */
+	@Override
+	public ClassNode visitTypeTypeOrVoid(TypeTypeOrVoidContext ctx) {
+		if (ctx.VOID() != null) {
+			return new ClassNode(ctx, ctx.VOID().getText());
+		} else {
+			return visitTypeType(ctx.typeType());
+		}
 	}
 
 	/*
@@ -562,4 +606,5 @@ public class JavaParserCustomVisitor extends JavaParserBaseVisitor<ClassNode> {
 			return visitChildren(ctx);
 		}
 	}
+
 }

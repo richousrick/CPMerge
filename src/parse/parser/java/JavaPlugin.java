@@ -184,4 +184,24 @@ public class JavaPlugin implements PluginInterface {
 		return new JavaPlugin();
 	}
 
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#preMerge()
+	 */
+	@Override
+	public void preMerge() {
+		// TODO Auto-generated method stub
+
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#postMerge()
+	 */
+	@Override
+	public void postMerge() {
+		// TODO Auto-generated method stub
+
+	}
+
 }

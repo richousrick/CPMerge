@@ -54,4 +54,8 @@ public interface PluginInterface {
 
 	public PluginInterface generateInstance();
 
+	public void preMerge();
+
+	public void postMerge();
+
 }

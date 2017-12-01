@@ -1,13 +1,8 @@
 package dif;
 
-import java.io.InvalidClassException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Vector;
 
 import org.antlr.v4.runtime.ParserRuleContext;
-
-import com.sun.corba.se.impl.io.TypeMismatchException;
 
 import node.Node;
 
@@ -22,6 +17,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 
 	/**
 	 * Type of data held in node 0:class head 1:method head 2:statement
+	 * 3:temporary
 	 */
 	private byte type;
 
@@ -118,6 +114,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 		return str;
 	}
 
+	@Override
 	public String toString() {
 		return print("", true);
 	}
