@@ -114,7 +114,7 @@ public class MergeThread implements Runnable {
 	 */
 	private List<int[]> compareMethods(ClassNode method1, ClassNode method2) {
 		// optimise
-		float editDistance = apted.computeEditDistance(method1, method2) - 1;
+		float editDistance = apted.computeEditDistance(method1, method2);
 		int maxSize = Math.max(method1.getSize(), method2.getSize());
 		float diffValue = (maxSize - editDistance) / maxSize;
 		if (diffValue < minPer) {

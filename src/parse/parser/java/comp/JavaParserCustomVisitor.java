@@ -31,6 +31,9 @@ import parse.parser.java.comp.JavaParser.PrimaryContext;
 import parse.parser.java.comp.JavaParser.PrimitiveTypeContext;
 import parse.parser.java.comp.JavaParser.StatementContext;
 import parse.parser.java.comp.JavaParser.SuperSuffixContext;
+import parse.parser.java.comp.JavaParser.SwitchBlockStatementGroupContext;
+import parse.parser.java.comp.JavaParser.SwitchLabelContext;
+import parse.parser.java.comp.JavaParser.TypeArgumentsContext;
 import parse.parser.java.comp.JavaParser.TypeDeclarationContext;
 import parse.parser.java.comp.JavaParser.TypeTypeContext;
 import parse.parser.java.comp.JavaParser.TypeTypeOrVoidContext;
@@ -236,9 +239,18 @@ public class JavaParserCustomVisitor extends JavaParserBaseVisitor<ClassNode> {
 		} else if (ctx.SWITCH() != null) {
 			node.setIdentifier("Switch");
 			node.addChild(visitParExpression(ctx.parExpression()));
-			// TODO complete
+			// TODO: check works
+			for(int i = 2; i < ctx.getChildCount(); i++){
+				if(ctx.getChild(i) instanceof SwitchBlockStatementGroupContext){
+					node.addChild(visitSwitchBlockStatementGroup((SwitchBlockStatementGroupContext) ctx.getChild(i)));
+				}else if(ctx.getChild(i) instanceof SwitchLabelContext){
+					node.addChild(visitSwitchLabel((SwitchLabelContext) ctx.getChild(i)));
+				}
+			}
 		} else if (ctx.SYNCHRONIZED() != null) {
-			// TODO complete
+			node.setIdentifier(ctx.SYNCHRONIZED().getText());
+			node.addChild(visitParExpression(ctx.parExpression()));
+			node.addChild(visitBlock(ctx.block()));
 		} else if (ctx.RETURN() != null) {
 			node.setIdentifier("Return");
 			if (ctx.expression(0) != null) {
@@ -393,7 +405,7 @@ public class JavaParserCustomVisitor extends JavaParserBaseVisitor<ClassNode> {
 			}
 			return node;
 		} else if (ctx.getChild(0) instanceof TypeTypeContext) {
-			ClassNode cn = new ClassNode(ctx, "expression")
+			ClassNode cn = new ClassNode(ctx, "expression");
 		} else if (ctx.getChild(0) instanceof TerminalNodeImpl) {
 
 		} else if (ctx.getChild(0) instanceof ClassTypeContext) {
@@ -467,7 +479,20 @@ public class JavaParserCustomVisitor extends JavaParserBaseVisitor<ClassNode> {
 	 */
 	@Override
 	public ClassNode visitClassOrInterfaceType(ClassOrInterfaceTypeContext ctx) {
-		return super.visitClassOrInterfaceType(ctx);
+		ClassNode node = new ClassNode(ctx, "ClassOrInterfaceType");
+		
+		for(int i = 0; i<ctx.getChildCount(); i++){
+			if(ctx.getChild(i) instanceof TerminalNodeImpl){
+				node.addChild(new ClassNode(null, ctx.getChild(i).getText()));
+			}else if(ctx.getChild(i) instanceof TypeArgumentsContext){
+				node.addChild(visitTypeArguments((TypeArgumentsContext) ctx.getChild(i)));
+			}else{
+				System.err.println("invalid child");
+			}
+		}
+		
+		
+		return node;
 	}
 
 	/*

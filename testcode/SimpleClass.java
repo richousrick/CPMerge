@@ -54,6 +54,13 @@ public class SimpleClass {
 			int j = 5 + 3;
 			int i = 1 + 1;
 		}
+		
+		public void f6(){
+			int i = 5+3;
+			int j = 1+1;
+			
+			j = 5;
+		}
 	}
 }
 

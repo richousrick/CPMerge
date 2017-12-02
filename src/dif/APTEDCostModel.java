@@ -49,7 +49,7 @@ public class APTEDCostModel implements CostModel<ParserRuleContext> {
 		if (cn0.getType() == 1 && cn1.getType() == 1) {
 			return 0.0f;
 		} else {
-			return cn0.getIdentifier().equals(cn1.getIdentifier()) ? 0.0f : 1.1f;
+			return cn0.getIdentifier().equals(cn1.getIdentifier()) ? 0.0f : 1.0f;
 		}
 	}
 
