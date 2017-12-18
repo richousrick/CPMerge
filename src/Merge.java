@@ -2,6 +2,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -54,6 +55,11 @@ public class Merge {
 		}
 		Helper.printToSTD("Thread Assigned, Waiting for completion", "Main");
 		executor.shutdown();
+		try {
+			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 		System.out.println("Done");
 	}
 
@@ -160,10 +166,14 @@ public class Merge {
 	}
 
 	public static void main(String[] args) {
-		// args = new String[] { "-rvl", "Java", "-p", "testcode/", "-t", "12"
-		// };
-		args = new String[] { "-rvl", "Java", "-p",
-				"E:\\University\\Workspace\\CPMerge\\src\\parse\\parser\\java\\comp\\JavaParser.java", "-t", "12" };
+		boolean runOnSmall = true;
+		if (runOnSmall) {
+			args = new String[] { "-rl", "Java", "-p", "testcode/", "-t", "12" };
+		} else {
+			args = new String[] { "-rl", "Java", "-p",
+					"E:\\University\\Workspace\\CPMerge\\src\\parse\\parser\\java\\comp\\JavaParser.java", "-t", "12" };
+		}
+
 		Merge m = new Merge(args);
 	}
 
