@@ -3,6 +3,7 @@ package dif;
 import java.util.ArrayList;
 
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.tree.TerminalNode;
 
 import node.Node;
 
@@ -93,6 +94,26 @@ public class ClassNode extends Node<ParserRuleContext> {
 			}
 		}
 		return size;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see node.Node#addChild(node.Node)
+	 */
+	@Override
+	public void addChild(Node c) {
+		if (c != null)
+			super.addChild(c);
+		else
+			System.err.println("Trying to add a null node to the class");
+	}
+
+	public void addChild(String identifier) {
+		super.addChild(new ClassNode(null, identifier));
+	}
+
+	public void addChild(TerminalNode identifier) {
+		super.addChild(new ClassNode(null, identifier.getText()));
 	}
 
 	public int getSize() {

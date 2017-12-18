@@ -21,7 +21,7 @@ import parse.parser.java.comp.JavaParser.MethodDeclarationContext;
 import parse.parser.java.comp.JavaParser.ModifierContext;
 import parse.parser.java.comp.JavaParser.StatementContext;
 import parse.parser.java.comp.JavaParser.TypeDeclarationContext;
-import parse.parser.java.comp.JavaParserCustomVisitor;
+import parse.parser.java.comp.JavaParserClassNodeVisitor;
 
 /**
  * TODO Annotate class
@@ -162,7 +162,7 @@ public class JavaPlugin implements PluginInterface {
 	 */
 	@Override
 	public ArrayList<ClassNode> getClasses() {
-		JavaParserCustomVisitor visitor = new JavaParserCustomVisitor();
+		JavaParserClassNodeVisitor visitor = new JavaParserClassNodeVisitor();
 		return visitor.visitCompilationUnit(unit).getChildrenAsCN();
 	}
 

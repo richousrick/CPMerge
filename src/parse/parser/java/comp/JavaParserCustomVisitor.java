@@ -44,7 +44,9 @@ import parse.parser.java.comp.JavaParser.VariableInitializerContext;
  * TODO Annotate class
  * 
  * @author 146813
+ * @deprecated
  */
+@Deprecated
 public class JavaParserCustomVisitor extends JavaParserBaseVisitor<ClassNode> {
 
 	ArrayList<ClassNode> classes;
@@ -240,10 +242,10 @@ public class JavaParserCustomVisitor extends JavaParserBaseVisitor<ClassNode> {
 			node.setIdentifier("Switch");
 			node.addChild(visitParExpression(ctx.parExpression()));
 			// TODO: check works
-			for(int i = 2; i < ctx.getChildCount(); i++){
-				if(ctx.getChild(i) instanceof SwitchBlockStatementGroupContext){
+			for (int i = 2; i < ctx.getChildCount(); i++) {
+				if (ctx.getChild(i) instanceof SwitchBlockStatementGroupContext) {
 					node.addChild(visitSwitchBlockStatementGroup((SwitchBlockStatementGroupContext) ctx.getChild(i)));
-				}else if(ctx.getChild(i) instanceof SwitchLabelContext){
+				} else if (ctx.getChild(i) instanceof SwitchLabelContext) {
 					node.addChild(visitSwitchLabel((SwitchLabelContext) ctx.getChild(i)));
 				}
 			}
@@ -480,18 +482,17 @@ public class JavaParserCustomVisitor extends JavaParserBaseVisitor<ClassNode> {
 	@Override
 	public ClassNode visitClassOrInterfaceType(ClassOrInterfaceTypeContext ctx) {
 		ClassNode node = new ClassNode(ctx, "ClassOrInterfaceType");
-		
-		for(int i = 0; i<ctx.getChildCount(); i++){
-			if(ctx.getChild(i) instanceof TerminalNodeImpl){
+
+		for (int i = 0; i < ctx.getChildCount(); i++) {
+			if (ctx.getChild(i) instanceof TerminalNodeImpl) {
 				node.addChild(new ClassNode(null, ctx.getChild(i).getText()));
-			}else if(ctx.getChild(i) instanceof TypeArgumentsContext){
+			} else if (ctx.getChild(i) instanceof TypeArgumentsContext) {
 				node.addChild(visitTypeArguments((TypeArgumentsContext) ctx.getChild(i)));
-			}else{
+			} else {
 				System.err.println("invalid child");
 			}
 		}
-		
-		
+
 		return node;
 	}
 
