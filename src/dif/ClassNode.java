@@ -8,28 +8,34 @@ import org.antlr.v4.runtime.tree.TerminalNode;
 import node.Node;
 
 /**
- * TODO Annotate class
+ * This class is used to represent the parsed code in a way that can be easier processed
  * 
- * @author 146813
+ * @author Rikkey Paal
  */
 public class ClassNode extends Node<ParserRuleContext> {
 
 	private String identifier;
 
 	/**
-	 * Type of data held in node 0:class head 1:method head 2:statement
-	 * 3:temporary
+	 * Type of data held in node<br>
+	 * 0 : class head<br>
+	 * 1 : method head<br>
+	 * 2 : statement<br>
+	 * 3 : temporary<br>
 	 */
 	private byte type;
 
+	/**
+	 * Number of descendants the node has + 1
+	 */
 	private int size = -1;
 
 	/**
-	 * Initializes the ClassNode class TODO Annotate constructor
+	 * Initialises the ClassNode class
 	 * 
-	 * @param nodeData
-	 * @param identifier
-	 * @param type
+	 * @param nodeData node in the CST this node is referencing
+	 * @param identifier detailing what the value in the CST is
+	 * @param type the {@link #type}
 	 * 
 	 */
 	public ClassNode(ParserRuleContext nodeData, String identifier, byte type) {
@@ -39,17 +45,13 @@ public class ClassNode extends Node<ParserRuleContext> {
 	}
 
 	/**
-	 * Initializes the ClassNode class TODO Annotate constructor
+	 * Initialises the ClassNode with a {@link #type} of 2
 	 * 
-	 * @param nodeData
-	 * @param identifier
-	 * @param type
-	 * 
+	 * @param nodeData node in the CST this node is referencing
+	 * @param identifier detailing what the value in the CST is
 	 */
 	public ClassNode(ParserRuleContext nodeData, String identifier) {
-		super(nodeData);
-		this.identifier = identifier;
-		this.type = (byte) 2;
+		this(nodeData, identifier, (byte)2);
 	}
 
 	public ArrayList<ClassNode> getChildrenAsCN() throws ClassCastException {
@@ -82,6 +84,12 @@ public class ClassNode extends Node<ParserRuleContext> {
 		this.identifier = identifier;
 	}
 
+	/**
+	 * Recalculates the {@link #size} of the node.<br>
+	 * This is done by recalculating the size of all child nodes.
+	 * The size is equal to the sum of the sizes of all children plus 1.
+	 * @return the size of the node
+	 */
 	public int recalculateSize() {
 		if (getChildren().size() == 0) {
 			return 1;
@@ -108,14 +116,25 @@ public class ClassNode extends Node<ParserRuleContext> {
 			System.err.println("Trying to add a null node to the class");
 	}
 
+	/**
+	 * Creates a new ClassNode from the text given, this is then {@link #addChild(Node) added as a child}.
+	 * @param identifier of the new ClassNode
+	 */
 	public void addChild(String identifier) {
 		super.addChild(new ClassNode(null, identifier));
 	}
 
-	public void addChild(TerminalNode identifier) {
-		super.addChild(new ClassNode(null, identifier.getText()));
+	/**
+	 * Runs {@link #addChild(String)} using the text from the terminal node.
+	 * @param node to be used as the name of the new ClassNode
+	 */
+	public void addChild(TerminalNode node) {
+		super.addChild(new ClassNode(null, node.getText()));
 	}
 
+	/**
+	 * @return the size
+	 */
 	public int getSize() {
 		if (size == -1)
 			return recalculateSize();
@@ -123,10 +142,15 @@ public class ClassNode extends Node<ParserRuleContext> {
 			return size;
 	}
 
-	private void compress() {
+	/**
+	 * Try's to replace long chains of nodes in the subtree with a single node.<br>
+	 * This is done by finding all chains of nodes, where each node in the chain has at most 1 child.
+	 * Then for each chain the identifiers of its nodes are concatenated, and used to generate a new ClassNode which will replace the chain.
+	 */
+	private void compressMethod() {
 		ArrayList<ClassNode> children = getChildrenAsCN();
 		for (ClassNode c : children) {
-			c.compress();
+			c.compressMethod();
 		}
 		if (children.size() == 1 && children.get(0).getType() == 2) {
 			this.identifier += "." + children.get(0).getIdentifier();
@@ -137,11 +161,15 @@ public class ClassNode extends Node<ParserRuleContext> {
 		}
 	}
 
-	public void compressClass(boolean topLevel) {
+	/**
+	 * {@link #compressMethod() Compresses all methods} that are inside the class.
+	 * @param recalulateSize if true the class will have its size recalculated after compressing.
+	 */
+	private void compressClass(boolean recalulateSize) {
 		for (ClassNode c : getChildrenAsCN()) {
 			if (c.getType() == 2) {
-				c.compress();
-				if (topLevel) {
+				c.compressMethod();
+				if (recalulateSize) {
 					c.recalculateSize();
 				}
 			} else if (c.getType() == 1 || c.getType() == 0) {
@@ -150,10 +178,21 @@ public class ClassNode extends Node<ParserRuleContext> {
 		}
 	}
 
+	/**
+	 * {@link #compressMethod() Compresses all methods} that are inside the class.
+	 * Then {@link #recalculateSize() recalculates the size} of the class.
+	 */
 	public void compressClass() {
 		compressClass(true);
 	}
 
+	/**
+	 * Returns a string representation of the node.<br>
+	 * Used for debugging and testing.<br>
+	 * @param prefix to be added to each line. e.g. addong a tab for indentation.
+	 * @param isTail if true \ is printed, | is printed otherwise
+	 * @return A string representation of the tree
+	 */
 	public String print(String prefix, boolean isTail) {
 		ArrayList<ClassNode> children = getChildrenAsCN();
 		String str = prefix + (isTail ? "\\-- " : "|-- ") + identifier;
@@ -166,6 +205,10 @@ public class ClassNode extends Node<ParserRuleContext> {
 		return str;
 	}
 
+	/**
+	 * (non-Javadoc)
+	 * @see Object#toString()
+	 */
 	@Override
 	public String toString() {
 		return print("", true);
