@@ -45,7 +45,7 @@ public class Merge {
 		// dish out to threads
 
 		ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
-
+		long startTime = System.nanoTime();
 		if (Helper.verbose)
 			System.out.println("Reading files and distributing threads");
 		for (File f : files) {
@@ -60,7 +60,14 @@ public class Merge {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		System.out.println("Done");
+		long duration = System.nanoTime() - startTime;
+		if (duration < 1000000000) {
+			System.out.println("Done in " + duration + "ns");
+		} else {
+			duration = TimeUnit.SECONDS.convert(duration, TimeUnit.NANOSECONDS);
+			System.out.printf("Done in %02d:%02d:%02d%n", duration / 3600, (duration % 3600) / 60, duration % 60);
+		}
+
 	}
 
 	private void parseOptions(String[] args) {

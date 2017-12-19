@@ -123,6 +123,37 @@ public class ClassNode extends Node<ParserRuleContext> {
 			return size;
 	}
 
+	private void compress() {
+		ArrayList<ClassNode> children = getChildrenAsCN();
+		for (ClassNode c : children) {
+			c.compress();
+		}
+		if (children.size() == 1 && children.get(0).getType() == 2) {
+			this.identifier += "." + children.get(0).getIdentifier();
+			getChildren().remove(0);
+			for (ClassNode c : children.get(0).getChildrenAsCN()) {
+				addChild(c);
+			}
+		}
+	}
+
+	public void compressClass(boolean topLevel) {
+		for (ClassNode c : getChildrenAsCN()) {
+			if (c.getType() == 2) {
+				c.compress();
+				if (topLevel) {
+					c.recalculateSize();
+				}
+			} else if (c.getType() == 1 || c.getType() == 0) {
+				c.compressClass(false);
+			}
+		}
+	}
+
+	public void compressClass() {
+		compressClass(true);
+	}
+
 	public String print(String prefix, boolean isTail) {
 		ArrayList<ClassNode> children = getChildrenAsCN();
 		String str = prefix + (isTail ? "\\-- " : "|-- ") + identifier;

@@ -32,6 +32,9 @@ public class MergeThread implements Runnable {
 	private double minPer;
 	private double minPerDelta;
 	private APTED<APTEDCostModel, ParserRuleContext> apted;
+	private int totalComparisons = 0;
+	private int comparisonsDone = 0;
+	private double perShown = 0;
 
 	/**
 	 * 
@@ -81,10 +84,16 @@ public class MergeThread implements Runnable {
 		apted = new APTED<APTEDCostModel, ParserRuleContext>(new APTEDCostModel());
 
 		Helper.printToSTD("Methods Extracted, Searching for matches", f.getName());
+		int numMethods = 0;
+		for (ClassNode classNode : classMethods) {
+			int size = classNode.getChildrenAsCN().size();
+			numMethods += size;
+			totalComparisons += (size * (size - 1)) / 2;
+		}
+		System.out.println(totalComparisons);
 		for (ClassNode classNode : classMethods) {
 			processClass(classNode);
 		}
-
 	}
 
 	private void processClass(ClassNode classNode) {
@@ -100,6 +109,12 @@ public class MergeThread implements Runnable {
 				if (comp != null) {
 					comps.get(i).add(comp);
 				}
+				comparisonsDone++;
+				double perDone = ((double) comparisonsDone) / ((double) totalComparisons);
+				if (perDone > perShown + 0.01) {
+					perShown = Math.floor(perDone * 100) / 100;
+					System.out.printf("%.2f%%\n", perShown);
+				}
 			}
 		}
 
@@ -113,7 +128,13 @@ public class MergeThread implements Runnable {
 	 * @return
 	 */
 	private List<int[]> compareMethods(ClassNode method1, ClassNode method2) {
-		// optimise
+		int s1 = method1.getSize();
+		int s2 = method2.getSize();
+		// if one method is too large for minPer to be reached don't compute
+		if (s1 >= s2 * minPer && s2 >= s1 * minPer) {
+			return null;
+		}
+
 		float editDistance = apted.computeEditDistance(method1, method2);
 		int maxSize = Math.max(method1.getSize(), method2.getSize());
 		float diffValue = (maxSize - editDistance) / maxSize;

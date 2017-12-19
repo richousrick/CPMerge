@@ -163,7 +163,11 @@ public class JavaPlugin implements PluginInterface {
 	@Override
 	public ArrayList<ClassNode> getClasses() {
 		JavaParserClassNodeVisitor visitor = new JavaParserClassNodeVisitor();
-		return visitor.visitCompilationUnit(unit).getChildrenAsCN();
+		ArrayList<ClassNode> classes = visitor.visitCompilationUnit(unit).getChildrenAsCN();
+		for (ClassNode c : classes) {
+			c.compressClass();
+		}
+		return classes;
 	}
 
 	/*
