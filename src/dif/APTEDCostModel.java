@@ -20,7 +20,6 @@ public class APTEDCostModel implements CostModel<ParserRuleContext> {
 	 */
 	@Override
 	public float del(Node<ParserRuleContext> arg0) {
-		// System.out.println("del: " + ((ClassNode)arg0).getIdentifier());
 		return 1.0f;
 	}
 
@@ -30,7 +29,6 @@ public class APTEDCostModel implements CostModel<ParserRuleContext> {
 	 */
 	@Override
 	public float ins(Node<ParserRuleContext> arg0) {
-		// System.out.println("ins: " + ((ClassNode)arg0).getIdentifier());
 		return 1.0f;
 	}
 
@@ -41,15 +39,13 @@ public class APTEDCostModel implements CostModel<ParserRuleContext> {
 	@Override
 	public float ren(Node<ParserRuleContext> arg0, Node<ParserRuleContext> arg1) {
 		// TODO : check correct terms
-		// System.out.println("ren: "+((ClassNode)arg0).getIdentifier() +" to
-		// "+((ClassNode)arg1).getIdentifier());
 		ClassNode cn0 = (ClassNode) arg0;
 		ClassNode cn1 = (ClassNode) arg1;
 
-		if (cn0.getType() == 1 && cn1.getType() == 1) {
+		if (cn0.getType() == cn1.getType() && cn0.getType() != 2) {
 			return 0.0f;
 		} else {
-			return cn0.getIdentifier().equals(cn1.getIdentifier()) ? 0.0f : 1.0f;
+			return cn0.getIdentifier().equals(cn1.getIdentifier()) ? 0.0f : 3.0f;
 		}
 	}
 
