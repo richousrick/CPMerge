@@ -7,6 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -96,6 +97,14 @@ public class MergeThread implements Runnable {
 		}
 	}
 
+	/**
+	 * Compares all the methods in the class with one another, merging them into
+	 * one method if possible. TODO modify implementation to group methods into
+	 * larger than binary pairs.
+	 * 
+	 * @param classNode
+	 *            containing the class to be processed
+	 */
 	private void processClass(ClassNode classNode) {
 		ArrayList<ArrayList<List<int[]>>> comps = new ArrayList<>();
 		ArrayList<ClassNode> methods = classNode.getChildrenAsCN();
@@ -121,11 +130,18 @@ public class MergeThread implements Runnable {
 	}
 
 	/**
-	 * TODO Annotate method
+	 * Compares two classNodes. This returns a mapping between the two methods.
+	 * Or null if they are not sufficiently similar. The mapping [a,b] states
+	 * that the a'th node in the smaller method is the same as the b'th node in
+	 * the larger. The positioning uses post order staring at 1. If a node is
+	 * mapped with 0 as a pair then it is unique to that method.
 	 * 
-	 * @param parserRuleContext
-	 * @param parserRuleContext2
-	 * @return
+	 * @param method1
+	 *            first method to compare
+	 * @param method2
+	 *            second method to be compared
+	 * @return the difference mapping between the two nodes, Or null if they are
+	 *         too different.
 	 */
 	private List<int[]> compareMethods(ClassNode method1, ClassNode method2) {
 		int s1 = method1.getSize();
@@ -134,8 +150,13 @@ public class MergeThread implements Runnable {
 		if (s1 < s2 * minPer || s2 < s1 * minPer) {
 			return null;
 		}
+		float editDistance;
+		if (s1 > s2) {
+			editDistance = apted.computeEditDistance(method2, method1);
+		} else {
+			editDistance = apted.computeEditDistance(method1, method2);
+		}
 
-		float editDistance = apted.computeEditDistance(method1, method2);
 		int maxSize = Math.max(method1.getSize(), method2.getSize());
 		float diffValue = (maxSize - editDistance) / maxSize;
 		if (diffValue < minPer) {
@@ -145,8 +166,85 @@ public class MergeThread implements Runnable {
 				"\t" + f.getName());
 		LinkedList<int[]> list = apted.computeEditMapping();
 		Helper.printToSTD("\t" + Arrays.deepToString(list.toArray()));
-		Helper.printToSTD(method1.print("\t", true));
-		Helper.printToSTD(method2.print("\t", true));
+		if (s1 > s2) {
+			Helper.printToSTD(method2.print("\t", true));
+			Helper.printToSTD(method1.print("\t", true));
+			// Helper.printToSTD(mergeMethods(method2, method1,
+			// list).print("\t", true));
+			mergeMethods(method2, method1, list);
+		} else {
+			Helper.printToSTD(method1.print("\t", true));
+			Helper.printToSTD(method2.print("\t", true));
+			// Helper.printToSTD(mergeMethods(method1, method2,
+			// list).print("\t", true));
+			mergeMethods(method1, method2, list);
+		}
+
 		return list;
 	}
+
+	/**
+	 * Merges two methods into one using the specified mapping.
+	 * 
+	 * TODO complete implementation
+	 * 
+	 * @param method1
+	 *            the smaller method to be mapped
+	 * @param method2
+	 *            the larger method to be mapped
+	 * @param mapping
+	 *            between the two methods
+	 * @return a new {@link ClassNode} that behaves the same as
+	 */
+	private ClassNode mergeMethods(ClassNode method1, ClassNode method2, List<int[]> mapping) {
+		ClassNode shared = new ClassNode(method1);
+		ArrayList<ClassNode>[] mergeCandidates = getMergeCandidates(shared, method2, mapping);
+		ArrayList<ClassNode> candidatesFrom1 = mergeCandidates[0];
+		ArrayList<ClassNode> candidatesFrom2 = mergeCandidates[1];
+
+		Helper.printToSTD("\tShared Code");
+		Helper.printToSTD(shared.print("\t\t", true));
+		Helper.printToSTD("\tcandidates from 1");
+		for (ClassNode c : candidatesFrom1) {
+			Helper.printToSTD(c.print("\t\t", true));
+		}
+		Helper.printToSTD("\tcandidates from 2");
+
+		for (ClassNode c : candidatesFrom2) {
+			Helper.printToSTD(c.print("\t\t", true));
+		}
+
+		return null;
+	}
+
+	/**
+	 * Retrieves the root nodes of subtrees that are unique to each method.
+	 * method 1 is also converted into a tree containing the shared nodes.
+	 * 
+	 * @param method1
+	 *            the smaller method to get the merge candidates out of. Also
+	 *            all unique nodes will be removed.
+	 * @param method2
+	 *            the larger method to get the merge candidates from.
+	 * @param mapping
+	 *            between the two
+	 * @return an array containing the roots of the unique subtrees.
+	 */
+	private ArrayList<ClassNode>[] getMergeCandidates(ClassNode method1, ClassNode method2, List<int[]> mapping) {
+		HashSet<Integer> set1 = new HashSet<>();
+		HashSet<Integer> set2 = new HashSet<>();
+		ArrayList<ClassNode>[] mergeCandidates = new ArrayList[2];
+		for (int[] map : mapping) {
+			if (map[0] == 0) {
+				set2.add(map[1]);
+			} else if (map[1] == 0) {
+				set1.add(map[0]);
+			}
+		}
+		mergeCandidates[0] = method1.getMinimalNodesFromPostOrder(set1, true);
+		mergeCandidates[1] = method2.getMinimalNodesFromPostOrder(set2, false);
+
+		return mergeCandidates;
+	}
+
 }
