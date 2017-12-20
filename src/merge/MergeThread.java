@@ -131,7 +131,7 @@ public class MergeThread implements Runnable {
 		int s1 = method1.getSize();
 		int s2 = method2.getSize();
 		// if one method is too large for minPer to be reached don't compute
-		if (s1 >= s2 * minPer && s2 >= s1 * minPer) {
+		if (s1 < s2 * minPer || s2 < s1 * minPer) {
 			return null;
 		}
 
