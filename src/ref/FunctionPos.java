@@ -2,7 +2,7 @@ package ref;
 
 /**
  * TODO Annotate class
- * 
+ *
  * @author Rikkey Paal
  */
 public class FunctionPos {

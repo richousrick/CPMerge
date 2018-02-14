@@ -75,7 +75,7 @@ import parse.parser.java.comp.JavaParser.VariableModifierContext;
 /**
  * TODO Annotate class
  *
- * @author 146813
+ * @author Rikkey Paal
  */
 public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 

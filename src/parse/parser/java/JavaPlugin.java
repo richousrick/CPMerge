@@ -32,7 +32,7 @@ import ref.FunctionPos;
 /**
  * TODO Annotate class
  *
- * @author 146813
+ * @author Rikkey Paal
  */
 public class JavaPlugin implements PluginInterface {
 
