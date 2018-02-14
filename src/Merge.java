@@ -20,11 +20,22 @@ import ref.Helper;
 
 /**
  * TODO Annotate class
- * 
+ *
  * @author Rikkey Paal
  */
 public class Merge {
 
+	public static void main(String[] args) {
+		final boolean runOnSmall = true;
+		if (runOnSmall) {
+			args = new String[] { "-rl", "Java", "-p", "testcode/", "-t", "12" };
+		} else {
+			args = new String[] { "-rl", "Java", "-p",
+					"E:\\University\\Workspace\\CPMerge\\src\\parse\\parser\\java\\comp\\JavaParser.java", "-t", "12" };
+		}
+
+		new Merge(args);
+	}
 	String path = "";
 	String language = "";
 	boolean recursive = false;
@@ -32,6 +43,7 @@ public class Merge {
 	PluginInterface plugin = new JavaPlugin();
 	private int minMatch;
 	private double minPer;
+
 	private double minPerDelta;
 
 	/**
@@ -40,24 +52,25 @@ public class Merge {
 	public Merge(String[] args) {
 		parseOptions(args);
 		// get list of files
-		ArrayList<File> files = getFiles(new File(path));
+		final ArrayList<File> files = getFiles(new File(path));
 		maxThreads = Math.min(maxThreads, files.size());
 		// dish out to threads
 
-		ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
-		long startTime = System.nanoTime();
-		if (Helper.verbose)
+		final ExecutorService executor = Executors.newFixedThreadPool(maxThreads);
+		final long startTime = System.nanoTime();
+		if (Helper.verbose) {
 			System.out.println("Reading files and distributing threads");
-		for (File f : files) {
+		}
+		for (final File f : files) {
 			Helper.printToSTD("Generating thread for " + f.getName(), "Main");
-			MergeThread t = new MergeThread(f, plugin.generateInstance(), minMatch, minPer, minPerDelta);
+			final MergeThread t = new MergeThread(f, plugin.generateInstance(), minMatch, minPer, minPerDelta);
 			executor.execute(t);
 		}
 		Helper.printToSTD("Thread Assigned, Waiting for completion", "Main");
 		executor.shutdown();
 		try {
 			executor.awaitTermination(Long.MAX_VALUE, TimeUnit.NANOSECONDS);
-		} catch (InterruptedException e) {
+		} catch (final InterruptedException e) {
 			e.printStackTrace();
 		}
 		long duration = System.nanoTime() - startTime;
@@ -65,9 +78,31 @@ public class Merge {
 			System.out.println("Done in " + duration + "ns");
 		} else {
 			duration = TimeUnit.SECONDS.convert(duration, TimeUnit.NANOSECONDS);
-			System.out.printf("Done in %02d:%02d:%02d%n", duration / 3600, (duration % 3600) / 60, duration % 60);
+			System.out.printf("Done in %02d:%02d:%02d%n", duration / 3600, duration % 3600 / 60, duration % 60);
 		}
 
+	}
+
+	private ArrayList<File> getFiles(File root) {
+		final ArrayList<File> returnList = new ArrayList<>();
+		if (root.isDirectory()) {
+			if (Helper.verbose) {
+				System.out.println("Searching for files in \"" + root.getAbsolutePath() + "\"");
+			}
+			for (final File f : root.listFiles()) {
+				if (f.isFile() && plugin.validfile(f.getName())) {
+					if (Helper.verbose) {
+						System.out.println("found file \"" + f.getName() + "\"");
+					}
+					returnList.add(f);
+				} else if (recursive) {
+					returnList.addAll(getFiles(f));
+				}
+			}
+		} else {
+			returnList.add(root);
+		}
+		return returnList;
 	}
 
 	private void parseOptions(String[] args) {
@@ -76,14 +111,14 @@ public class Merge {
 		minPer = 0.2;
 		minPerDelta = 0;
 
-		Options options = new Options();
+		final Options options = new Options();
 
-		Option pathOpt = new Option("p", "path", true, "Path to the file or directory the code is in.");
+		final Option pathOpt = new Option("p", "path", true, "Path to the file or directory the code is in.");
 		pathOpt.setRequired(true);
 		pathOpt.setArgName("path");
 		options.addOption(pathOpt);
 
-		Option languageOpt = new Option("l", "language", true, "Language the code is written in.");
+		final Option languageOpt = new Option("l", "language", true, "Language the code is written in.");
 		languageOpt.setRequired(true);
 		languageOpt.setArgName("language");
 		options.addOption(languageOpt);
@@ -96,9 +131,9 @@ public class Merge {
 		options.addOption("m", "minMatch", true, "minimum number of statemetns to consititute a match.\n Defualt is 1");
 		options.addOption("v", "verbose", false, "display logging information");
 
-		CommandLineParser parser = new DefaultParser();
+		final CommandLineParser parser = new DefaultParser();
 		try {
-			CommandLine cmd = parser.parse(options, args);
+			final CommandLine cmd = parser.parse(options, args);
 
 			if (cmd.hasOption("path")) {
 				path = cmd.getOptionValue("path");
@@ -119,7 +154,7 @@ public class Merge {
 			if (cmd.hasOption('t')) {
 				try {
 					maxThreads = Integer.parseInt(cmd.getOptionValue('t'));
-				} catch (NumberFormatException e) {
+				} catch (final NumberFormatException e) {
 					System.out.println("Error: Thread parameter must be a positive integer");
 					showUsageExit(options);
 				}
@@ -128,10 +163,9 @@ public class Merge {
 			if (cmd.hasOption('s')) {
 				try {
 					minPer = Double.parseDouble(cmd.getOptionValue('s'));
-					if (minPer <= 0 || minPer > 1) {
+					if (minPer <= 0 || minPer > 1)
 						throw new NumberFormatException();
-					}
-				} catch (NumberFormatException e) {
+				} catch (final NumberFormatException e) {
 					System.out.println("Error: MinPer parameter must be in range 0>minPer>=1");
 					showUsageExit(options);
 				}
@@ -140,10 +174,9 @@ public class Merge {
 			if (cmd.hasOption('d')) {
 				try {
 					minPerDelta = Double.parseDouble(cmd.getOptionValue('d'));
-					if (minPerDelta + minPer <= 0 || minPerDelta + minPer > 1) {
+					if (minPerDelta + minPer <= 0 || minPerDelta + minPer > 1)
 						throw new NumberFormatException();
-					}
-				} catch (NumberFormatException e) {
+				} catch (final NumberFormatException e) {
 					System.out.println("Error: MinPerDelta parameter must be in range 0>minPerDelta-minPer>=1");
 					showUsageExit(options);
 				}
@@ -152,58 +185,25 @@ public class Merge {
 			if (cmd.hasOption('m')) {
 				try {
 					minMatch = Integer.parseInt(cmd.getOptionValue('m'));
-				} catch (NumberFormatException e) {
+				} catch (final NumberFormatException e) {
 					System.out.println("Error: MinMatch parameter must be a positive integer");
 					showUsageExit(options);
 				}
 			}
 
-		} catch (ParseException e) {
-			if (e.getClass() != MissingOptionException.class)
+		} catch (final ParseException e) {
+			if (e.getClass() != MissingOptionException.class) {
 				e.printStackTrace();
+			}
 
 			showUsageExit(options);
 		}
 	}
 
 	private void showUsageExit(Options options) {
-		HelpFormatter formatter = new HelpFormatter();
+		final HelpFormatter formatter = new HelpFormatter();
 		formatter.printHelp("CPMerge [options] -l language -p path", options);
 		System.exit(0);
-	}
-
-	public static void main(String[] args) {
-		boolean runOnSmall = true;
-		if (runOnSmall) {
-			args = new String[] { "-rl", "Java", "-p", "testcode/", "-t", "12" };
-		} else {
-			args = new String[] { "-rl", "Java", "-p",
-					"E:\\University\\Workspace\\CPMerge\\src\\parse\\parser\\java\\comp\\JavaParser.java", "-t", "12" };
-		}
-
-		Merge m = new Merge(args);
-	}
-
-	private ArrayList<File> getFiles(File root) {
-		ArrayList<File> returnList = new ArrayList<>();
-		if (root.isDirectory()) {
-			if (Helper.verbose) {
-				System.out.println("Searching for files in \"" + root.getAbsolutePath() + "\"");
-			}
-			for (File f : root.listFiles()) {
-				if (f.isFile() && plugin.validfile(f.getName())) {
-					if (Helper.verbose) {
-						System.out.println("found file \"" + f.getName() + "\"");
-					}
-					returnList.add(f);
-				} else if (recursive) {
-					returnList.addAll(getFiles(f));
-				}
-			}
-		} else {
-			returnList.add(root);
-		}
-		return returnList;
 	}
 
 	/*

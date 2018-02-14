@@ -42,11 +42,10 @@ public class APTEDCostModel implements CostModel<ParserRuleContext> {
 		ClassNode cn0 = (ClassNode) arg0;
 		ClassNode cn1 = (ClassNode) arg1;
 
-		if (cn0.getType() == cn1.getType() && cn0.getType() != 2) {
+		if (cn0.getType() == cn1.getType() && cn0.getType() != 2)
 			return 0.0f;
-		} else {
+		else
 			return cn0.getIdentifier().equals(cn1.getIdentifier()) ? 0.0f : 3.0f;
-		}
 	}
 
 }

@@ -23,8 +23,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitCompilationUnit(JavaParser.CompilationUnitContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -37,8 +36,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitPackageDeclaration(JavaParser.PackageDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -51,8 +49,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitImportDeclaration(JavaParser.ImportDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -65,8 +62,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitTypeDeclaration(JavaParser.TypeDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -79,8 +75,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitModifier(JavaParser.ModifierContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -93,8 +88,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitClassOrInterfaceModifier(JavaParser.ClassOrInterfaceModifierContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -107,8 +101,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitVariableModifier(JavaParser.VariableModifierContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -121,8 +114,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitClassDeclaration(JavaParser.ClassDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -135,8 +127,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitTypeParameters(JavaParser.TypeParametersContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -149,8 +140,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitTypeParameter(JavaParser.TypeParameterContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -163,8 +153,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitTypeBound(JavaParser.TypeBoundContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -177,8 +166,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitEnumDeclaration(JavaParser.EnumDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -191,8 +179,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitEnumConstants(JavaParser.EnumConstantsContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -205,8 +192,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitEnumConstant(JavaParser.EnumConstantContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -219,8 +205,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitEnumBodyDeclarations(JavaParser.EnumBodyDeclarationsContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -233,8 +218,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitInterfaceDeclaration(JavaParser.InterfaceDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -247,8 +231,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitClassBody(JavaParser.ClassBodyContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -261,8 +244,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitInterfaceBody(JavaParser.InterfaceBodyContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -275,8 +257,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitClassBodyDeclaration(JavaParser.ClassBodyDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -289,8 +270,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitMemberDeclaration(JavaParser.MemberDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -303,8 +283,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitMethodDeclaration(JavaParser.MethodDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -317,8 +296,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitMethodBody(JavaParser.MethodBodyContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -331,8 +309,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitTypeTypeOrVoid(JavaParser.TypeTypeOrVoidContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -345,8 +322,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitGenericMethodDeclaration(JavaParser.GenericMethodDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -359,8 +335,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitGenericConstructorDeclaration(JavaParser.GenericConstructorDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -373,8 +348,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitConstructorDeclaration(JavaParser.ConstructorDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -387,8 +361,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitFieldDeclaration(JavaParser.FieldDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -401,8 +374,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitInterfaceBodyDeclaration(JavaParser.InterfaceBodyDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -415,8 +387,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitInterfaceMemberDeclaration(JavaParser.InterfaceMemberDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -429,8 +400,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitConstDeclaration(JavaParser.ConstDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -443,8 +413,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitConstantDeclarator(JavaParser.ConstantDeclaratorContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -457,8 +426,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitInterfaceMethodDeclaration(JavaParser.InterfaceMethodDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -471,8 +439,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitInterfaceMethodModifier(JavaParser.InterfaceMethodModifierContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -485,8 +452,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitGenericInterfaceMethodDeclaration(JavaParser.GenericInterfaceMethodDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -499,8 +465,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitVariableDeclarators(JavaParser.VariableDeclaratorsContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -513,8 +478,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitVariableDeclarator(JavaParser.VariableDeclaratorContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -527,8 +491,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitVariableDeclaratorId(JavaParser.VariableDeclaratorIdContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -541,8 +504,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitVariableInitializer(JavaParser.VariableInitializerContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -555,8 +517,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitArrayInitializer(JavaParser.ArrayInitializerContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -569,8 +530,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitClassOrInterfaceType(JavaParser.ClassOrInterfaceTypeContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -583,8 +543,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitTypeArgument(JavaParser.TypeArgumentContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -597,8 +556,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitQualifiedNameList(JavaParser.QualifiedNameListContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -611,8 +569,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitFormalParameters(JavaParser.FormalParametersContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -625,8 +582,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitFormalParameterList(JavaParser.FormalParameterListContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -639,8 +595,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitFormalParameter(JavaParser.FormalParameterContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -653,8 +608,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitLastFormalParameter(JavaParser.LastFormalParameterContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -667,8 +621,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitQualifiedName(JavaParser.QualifiedNameContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -681,8 +634,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitLiteral(JavaParser.LiteralContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -695,8 +647,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitIntegerLiteral(JavaParser.IntegerLiteralContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -709,8 +660,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitFloatLiteral(JavaParser.FloatLiteralContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -723,8 +673,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitAnnotation(JavaParser.AnnotationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -737,8 +686,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitElementValuePairs(JavaParser.ElementValuePairsContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -751,8 +699,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitElementValuePair(JavaParser.ElementValuePairContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -765,8 +712,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitElementValue(JavaParser.ElementValueContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -779,8 +725,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitElementValueArrayInitializer(JavaParser.ElementValueArrayInitializerContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -793,8 +738,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitAnnotationTypeDeclaration(JavaParser.AnnotationTypeDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -807,8 +751,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitAnnotationTypeBody(JavaParser.AnnotationTypeBodyContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -821,8 +764,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitAnnotationTypeElementDeclaration(JavaParser.AnnotationTypeElementDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -835,8 +777,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitAnnotationTypeElementRest(JavaParser.AnnotationTypeElementRestContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -849,8 +790,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitAnnotationMethodOrConstantRest(JavaParser.AnnotationMethodOrConstantRestContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -863,8 +803,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitAnnotationMethodRest(JavaParser.AnnotationMethodRestContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -877,8 +816,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitAnnotationConstantRest(JavaParser.AnnotationConstantRestContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -891,8 +829,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitDefaultValue(JavaParser.DefaultValueContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -905,8 +842,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitBlock(JavaParser.BlockContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -919,8 +855,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitBlockStatement(JavaParser.BlockStatementContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -933,8 +868,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitLocalVariableDeclaration(JavaParser.LocalVariableDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -947,8 +881,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitLocalTypeDeclaration(JavaParser.LocalTypeDeclarationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -961,8 +894,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitStatement(JavaParser.StatementContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -975,8 +907,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitCatchClause(JavaParser.CatchClauseContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -989,8 +920,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitCatchType(JavaParser.CatchTypeContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1003,8 +933,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitFinallyBlock(JavaParser.FinallyBlockContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1017,8 +946,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitResourceSpecification(JavaParser.ResourceSpecificationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1031,8 +959,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitResources(JavaParser.ResourcesContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1045,8 +972,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitResource(JavaParser.ResourceContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1059,8 +985,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitSwitchBlockStatementGroup(JavaParser.SwitchBlockStatementGroupContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1073,8 +998,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitSwitchLabel(JavaParser.SwitchLabelContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1087,8 +1011,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitForControl(JavaParser.ForControlContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1101,8 +1024,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitForInit(JavaParser.ForInitContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1115,8 +1037,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitEnhancedForControl(JavaParser.EnhancedForControlContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1129,8 +1050,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitParExpression(JavaParser.ParExpressionContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1143,8 +1063,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitExpressionList(JavaParser.ExpressionListContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1157,8 +1076,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitExpression(JavaParser.ExpressionContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1171,8 +1089,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitLambdaExpression(JavaParser.LambdaExpressionContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1185,8 +1102,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitLambdaParameters(JavaParser.LambdaParametersContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1199,8 +1115,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitLambdaBody(JavaParser.LambdaBodyContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1213,9 +1128,8 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitPrimary(JavaParser.PrimaryContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
+		throw new UnsupportedOperationException("Unimplmented");
 
-		return null;
 	}
 
 	/**
@@ -1228,8 +1142,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitClassType(JavaParser.ClassTypeContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1242,8 +1155,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitCreator(JavaParser.CreatorContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1256,8 +1168,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitCreatedName(JavaParser.CreatedNameContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1270,8 +1181,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitInnerCreator(JavaParser.InnerCreatorContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1284,8 +1194,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitArrayCreatorRest(JavaParser.ArrayCreatorRestContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1298,8 +1207,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitClassCreatorRest(JavaParser.ClassCreatorRestContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1312,8 +1220,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitExplicitGenericInvocation(JavaParser.ExplicitGenericInvocationContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1326,8 +1233,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitTypeArgumentsOrDiamond(JavaParser.TypeArgumentsOrDiamondContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1340,8 +1246,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitNonWildcardTypeArgumentsOrDiamond(JavaParser.NonWildcardTypeArgumentsOrDiamondContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1354,8 +1259,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitNonWildcardTypeArguments(JavaParser.NonWildcardTypeArgumentsContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1368,8 +1272,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitTypeList(JavaParser.TypeListContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1382,8 +1285,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitTypeType(JavaParser.TypeTypeContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1396,8 +1298,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitPrimitiveType(JavaParser.PrimitiveTypeContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1410,8 +1311,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitTypeArguments(JavaParser.TypeArgumentsContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1424,8 +1324,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitSuperSuffix(JavaParser.SuperSuffixContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1438,8 +1337,7 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitExplicitGenericInvocationSuffix(JavaParser.ExplicitGenericInvocationSuffixContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 
 	/**
@@ -1452,7 +1350,6 @@ public class JavaParserBaseVisitor<T> extends AbstractParseTreeVisitor<T> implem
 	 */
 	@Override
 	public T visitArguments(JavaParser.ArgumentsContext ctx) {
-		System.err.println(Thread.currentThread().getStackTrace()[1] + ": unimplmented");
-		return null;
+		throw new UnsupportedOperationException("Unimplmented");
 	}
 }

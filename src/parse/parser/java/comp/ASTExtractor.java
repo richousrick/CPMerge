@@ -43,6 +43,7 @@ import parse.parser.java.comp.JavaParser.LocalTypeDeclarationContext;
 import parse.parser.java.comp.JavaParser.LocalVariableDeclarationContext;
 import parse.parser.java.comp.JavaParser.MemberDeclarationContext;
 import parse.parser.java.comp.JavaParser.MethodDeclarationContext;
+import parse.parser.java.comp.JavaParser.ModifierContext;
 import parse.parser.java.comp.JavaParser.NonWildcardTypeArgumentsContext;
 import parse.parser.java.comp.JavaParser.NonWildcardTypeArgumentsOrDiamondContext;
 import parse.parser.java.comp.JavaParser.ParExpressionContext;
@@ -71,12 +72,27 @@ import parse.parser.java.comp.JavaParser.VariableModifierContext;
 
 /**
  * TODO Annotate class
- * 
+ *
  * @author 146813
  */
-public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode> {
+public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 
 	private ArrayList<ClassNode> classes;
+	private final boolean requireMatchingReturnType;
+	private final boolean requireMatchingPublicity;
+
+	/**
+	 * Initializes the JavaParserClassNodeVisitor class TODO Annotate
+	 * constructor
+	 */
+	public ASTExtractor() {
+		requireMatchingPublicity = requireMatchingReturnType = true;
+	}
+
+	public ASTExtractor(boolean requireMatchingReturnType, boolean requireMatchingPublicity) {
+		this.requireMatchingPublicity = requireMatchingPublicity;
+		this.requireMatchingReturnType = requireMatchingReturnType;
+	}
 
 	/*
 	 * (non-Javadoc)
@@ -139,9 +155,8 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 	 */
 	@Override
 	public ClassNode visitClassBodyDeclaration(ClassBodyDeclarationContext ctx) {
-		if (ctx.memberDeclaration() != null) {
+		if (ctx.memberDeclaration() != null)
 			return visitMemberDeclaration(ctx.memberDeclaration());
-		}
 		return null;
 	}
 
@@ -153,11 +168,10 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 	 */
 	@Override
 	public ClassNode visitMemberDeclaration(MemberDeclarationContext ctx) {
-		if (ctx.methodDeclaration() != null) {
+		if (ctx.methodDeclaration() != null)
 			return visitMethodDeclaration(ctx.methodDeclaration());
-		} else if (ctx.classDeclaration() != null) {
+		else if (ctx.classDeclaration() != null)
 			return visitClassDeclaration(ctx.classDeclaration());
-		}
 		return null;
 	}
 
@@ -170,14 +184,23 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 	@Override
 	public ClassNode visitMethodDeclaration(MethodDeclarationContext ctx) {
 		if (ctx.methodBody().block() != null) {
-			ClassNode methodNode = new ClassNode(ctx, ctx.IDENTIFIER().toString(), (byte) 1);
+			String mustMatch = "";
+			if (requireMatchingPublicity) {
+				for (ModifierContext mc : ((ClassBodyDeclarationContext) ctx.getParent().getParent()).modifier()) {
+					mustMatch += visitModifierAsString(mc) + " ";
+				}
+			}
+			if (requireMatchingReturnType) {
+				mustMatch += visitTypeTypeOrVoid(ctx.typeTypeOrVoid()).toString();
+			}
+			ClassNode methodNode = new ClassNode(ctx, ctx.IDENTIFIER().toString(),
+					mustMatch);
 			for (ClassNode n : visitBlock(ctx.methodBody().block()).getChildrenAsCN()) {
 				methodNode.addChild(n);
 			}
 			return methodNode;
-		} else {
+		} else
 			return null;
-		}
 	}
 
 	/*
@@ -188,11 +211,10 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 	 */
 	@Override
 	public ClassNode visitTypeTypeOrVoid(TypeTypeOrVoidContext ctx) {
-		if (ctx.VOID() != null) {
+		if (ctx.VOID() != null)
 			return new ClassNode(ctx, ctx.VOID().getText());
-		} else {
+		else
 			return visitTypeType(ctx.typeType());
-		}
 	}
 
 	/*
@@ -203,11 +225,14 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 	 */
 	@Override
 	public ClassNode visitVariableDeclarators(VariableDeclaratorsContext ctx) {
-		ClassNode c = new ClassNode(ctx, "VARIABLEDECLARATORS");
+		ClassNode c = new ClassNode(ctx, "VariableDeclarators");
 		for (VariableDeclaratorContext v : ctx.variableDeclarator()) {
 			c.addChild(visitVariableDeclarator(v));
 		}
-		return c;
+		if (c.getChildrenAsCN().size() == 1)
+			return c.getChildrenAsCN().get(0);
+		else
+			return c;
 	}
 
 	/*
@@ -218,7 +243,7 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 	 */
 	@Override
 	public ClassNode visitVariableDeclarator(VariableDeclaratorContext ctx) {
-		ClassNode c = new ClassNode(ctx, "VARIABLEDECLARATOR");
+		ClassNode c = new ClassNode(ctx, "VariableDeclarator");
 		c.addChild(visitVariableDeclaratorId(ctx.variableDeclaratorId()));
 		if (ctx.variableInitializer() != null) {
 			c.addChild(visitVariableInitializer(ctx.variableInitializer()));
@@ -249,11 +274,10 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 	 */
 	@Override
 	public ClassNode visitVariableInitializer(VariableInitializerContext ctx) {
-		if (ctx.arrayInitializer() != null) {
+		if (ctx.arrayInitializer() != null)
 			return visitArrayInitializer(ctx.arrayInitializer());
-		} else {
+		else
 			return visitExpression(ctx.expression());
-		}
 	}
 
 	/*
@@ -285,8 +309,8 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 		for (int i = 0; i < ctx.getChildCount(); i++) {
 			if (ctx.getChild(i) instanceof TerminalNode) {
 				c.addChild((TerminalNode) ctx.getChild(i));
-			} else if (ctx.getChild(i) instanceof TypeArgumentContext) {
-				c.addChild(visitArguments((ArgumentsContext) ctx.getChild(i)));
+			} else if (ctx.getChild(i) instanceof TypeArgumentsContext) {
+				c.addChild(visitTypeArguments((TypeArgumentsContext) ctx.getChild(i)));
 			} else {
 				System.err.println("unexpectedContents");
 			}
@@ -396,21 +420,20 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 	 */
 	@Override
 	public ClassNode visitLiteral(LiteralContext ctx) {
-		if (ctx.CHAR_LITERAL() != null) {
+		if (ctx.CHAR_LITERAL() != null)
 			return new ClassNode(ctx, ctx.CHAR_LITERAL().getText());
-		} else if (ctx.STRING_LITERAL() != null) {
+		else if (ctx.STRING_LITERAL() != null)
 			return new ClassNode(ctx, ctx.STRING_LITERAL().getText());
-		} else if (ctx.BOOL_LITERAL() != null) {
+		else if (ctx.BOOL_LITERAL() != null)
 			return new ClassNode(ctx, ctx.BOOL_LITERAL().getText());
-		} else if (ctx.NULL_LITERAL() != null) {
+		else if (ctx.NULL_LITERAL() != null)
 			return new ClassNode(ctx, ctx.NULL_LITERAL().getText());
-		} else if (ctx.integerLiteral() != null) {
+		else if (ctx.integerLiteral() != null)
 			return visitIntegerLiteral(ctx.integerLiteral());
-		} else if (ctx.floatLiteral() != null) {
+		else if (ctx.floatLiteral() != null)
 			return visitFloatLiteral(ctx.floatLiteral());
-		} else {
+		else
 			throw new IllegalArgumentException("Unexpected literal declaration");
-		}
 	}
 
 	/*
@@ -421,17 +444,16 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 	 */
 	@Override
 	public ClassNode visitIntegerLiteral(IntegerLiteralContext ctx) {
-		if (ctx.DECIMAL_LITERAL() != null) {
+		if (ctx.DECIMAL_LITERAL() != null)
 			return new ClassNode(ctx, ctx.DECIMAL_LITERAL().getText());
-		} else if (ctx.HEX_LITERAL() != null) {
+		else if (ctx.HEX_LITERAL() != null)
 			return new ClassNode(ctx, ctx.HEX_LITERAL().getText());
-		} else if (ctx.OCT_LITERAL() != null) {
+		else if (ctx.OCT_LITERAL() != null)
 			return new ClassNode(ctx, ctx.OCT_LITERAL().getText());
-		} else if (ctx.BINARY_LITERAL() != null) {
+		else if (ctx.BINARY_LITERAL() != null)
 			return new ClassNode(ctx, ctx.BINARY_LITERAL().getText());
-		} else {
+		else
 			throw new IllegalArgumentException("Unexpected integer literal declaration");
-		}
 	}
 
 	/*
@@ -442,13 +464,12 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 	 */
 	@Override
 	public ClassNode visitFloatLiteral(FloatLiteralContext ctx) {
-		if (ctx.FLOAT_LITERAL() != null) {
+		if (ctx.FLOAT_LITERAL() != null)
 			return new ClassNode(ctx, ctx.FLOAT_LITERAL().getText());
-		} else if (ctx.HEX_FLOAT_LITERAL() != null) {
+		else if (ctx.HEX_FLOAT_LITERAL() != null)
 			return new ClassNode(ctx, ctx.HEX_FLOAT_LITERAL().getText());
-		} else {
+		else
 			throw new IllegalArgumentException("Unexpected float literal declaration");
-		}
 	}
 
 	/*
@@ -739,6 +760,8 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 		}
 		c.addChild(visitClassOrInterfaceType(ctx.classOrInterfaceType()));
 		c.addChild(visitVariableDeclaratorId(ctx.variableDeclaratorId()));
+		c.addChild("=");
+		c.addChild(visitExpression(ctx.expression()));
 		return c;
 	}
 
@@ -775,8 +798,9 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 			if (ctx.expression() != null) {
 				c.addChild(visitExpression(ctx.expression()));
 			} else {
-				c.addChild(ctx.IDENTIFIER().getText() + ":");
+				c.addChild(ctx.IDENTIFIER().getText());
 			}
+			c.addChild(":");
 		}
 		return c;
 	}
@@ -1231,25 +1255,24 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 	 */
 	@Override
 	public ClassNode visitPrimitiveType(PrimitiveTypeContext ctx) {
-		if (ctx.BOOLEAN() != null) {
+		if (ctx.BOOLEAN() != null)
 			return new ClassNode(ctx, ctx.BOOLEAN().getText());
-		} else if (ctx.CHAR() != null) {
+		else if (ctx.CHAR() != null)
 			return new ClassNode(ctx, ctx.CHAR().getText());
-		} else if (ctx.BYTE() != null) {
+		else if (ctx.BYTE() != null)
 			return new ClassNode(ctx, ctx.BYTE().getText());
-		} else if (ctx.SHORT() != null) {
+		else if (ctx.SHORT() != null)
 			return new ClassNode(ctx, ctx.SHORT().getText());
-		} else if (ctx.INT() != null) {
+		else if (ctx.INT() != null)
 			return new ClassNode(ctx, ctx.INT().getText());
-		} else if (ctx.LONG() != null) {
+		else if (ctx.LONG() != null)
 			return new ClassNode(ctx, ctx.LONG().getText());
-		} else if (ctx.FLOAT() != null) {
+		else if (ctx.FLOAT() != null)
 			return new ClassNode(ctx, ctx.FLOAT().getText());
-		} else if (ctx.DOUBLE() != null) {
+		else if (ctx.DOUBLE() != null)
 			return new ClassNode(ctx, ctx.DOUBLE().getText());
-		} else {
+		else
 			throw new IllegalArgumentException("Unexpected primiative type declaration");
-		}
 	}
 
 	/*
@@ -1316,6 +1339,40 @@ public class JavaParserClassNodeVisitor extends JavaParserBaseVisitor<ClassNode>
 			c.addChild(visitExpressionList(ctx.expressionList()));
 		}
 		return c;
+	}
+
+	public String visitModifierAsString(ModifierContext ctx) {
+		if (ctx.NATIVE() != null)
+			return "NATIVE";
+		else if (ctx.SYNCHRONIZED() != null)
+			return "SYNCHRONIZED";
+		else if (ctx.TRANSIENT() != null)
+			return "TRANSIENT";
+		else if (ctx.VOLATILE() != null)
+			return "VOLATILE";
+		else
+			return visitClassOrInterfaceModifier(ctx.classOrInterfaceModifier()).getIdentifier();
+	}
+
+	@Override
+	public ClassNode visitClassOrInterfaceModifier(ClassOrInterfaceModifierContext ctx) {
+		String str = "";
+		if (ctx.PUBLIC() != null) {
+			str = "PUBLIC";
+		} else if (ctx.PROTECTED() != null) {
+			str = "PROTECTED";
+		} else if (ctx.PRIVATE() != null) {
+			str = "PRIVATE";
+		} else if (ctx.STATIC() != null) {
+			str = "STATIC";
+		} else if (ctx.ABSTRACT() != null) {
+			str = "ABSTRACT";
+		} else if (ctx.FINAL() != null) {
+			str = "FINAL";
+		} else if (ctx.STRICTFP() != null) {
+			str = "STRICTFP";
+		}
+		return new ClassNode(ctx, str);
 	}
 
 }

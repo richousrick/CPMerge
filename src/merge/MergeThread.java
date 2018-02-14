@@ -1,13 +1,14 @@
 /**
- * 
+ *
  */
 package merge;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -18,6 +19,7 @@ import dif.APTEDCostModel;
 import dif.ClassNode;
 import distance.APTED;
 import parse.PluginInterface;
+import ref.FunctionPos;
 import ref.Helper;
 
 /**
@@ -26,22 +28,25 @@ import ref.Helper;
  */
 public class MergeThread implements Runnable {
 
-	private PluginInterface plugin;
-	private File f;
+
+	private final PluginInterface plugin;
+	private final File f;
 	private String ThreadName;
-	private int minMatch;
-	private double minPer;
-	private double minPerDelta;
+	private final int minMatch;
+	private final double minPer;
+	private final double minPerDelta;
 	private APTED<APTEDCostModel, ParserRuleContext> apted;
 	private int totalComparisons = 0;
 	private int comparisonsDone = 0;
+
 	private double perShown = 0;
 
+	String testPrintEnd = "";
 	/**
-	 * 
+	 *
 	 */
 	public MergeThread(File f, PluginInterface pluginInterface, int minMatch, double minPer, double minPerDelta) {
-		this.plugin = pluginInterface;
+		plugin = pluginInterface;
 		this.minMatch = minMatch;
 		this.minPer = minPer;
 		this.minPerDelta = minPerDelta;
@@ -54,197 +59,319 @@ public class MergeThread implements Runnable {
 	 */
 	@Override
 	public void run() {
-		Helper.printToSTD("Reading file", f.getName());
-		CharStream contents;
+		// Read methods from the file
+		ArrayList<ClassNode> classMethods;
 		try {
-			contents = Helper.readFile(f);
+			classMethods = parseFile();
 		} catch (IOException e) {
 			e.printStackTrace();
 			return;
 		}
-		Helper.printToSTD("Read file, Parsing contents", f.getName());
 
-		plugin.parse(contents);
-		Helper.printToSTD("File Parsed, Extracting methods", f.getName());
-		ArrayList<ClassNode> classMethods = plugin.getClasses();
-
+		// Print the class names and methods
 		if (Helper.test) {
-			for (ClassNode methods : classMethods) {
-				String functions = "";
-				for (ClassNode n : methods.getChildrenAsCN()) {
-					functions += n.getIdentifier() + ",";
+			for (ClassNode functions : classMethods) {
+				String functionsString = "";
+				for (ClassNode n : functions.getChildrenAsCN()) {
+					functionsString += n.getIdentifier() + ",";
 				}
-				Helper.printToSTD("Found class \"" + methods.getIdentifier() + "\" containing methods "
-						+ functions.substring(0, functions.length() - 1));
+				Helper.printToSTD("Found class \"" + functions.getIdentifier() + "\" containing functions "
+						+ functionsString.substring(0, functionsString.length() - 1));
 			}
 		}
 
+
 		Helper.printToSTD("Building costModel", f.getName());
-		// HashMap<Class<? extends ParserRuleContext>, ResoultionPattern> rules
-		// = plugin.getPatterns();
 		apted = new APTED<APTEDCostModel, ParserRuleContext>(new APTEDCostModel());
 
+
 		Helper.printToSTD("Methods Extracted, Searching for matches", f.getName());
-		int numMethods = 0;
+		// Count number of comparisons to be done - used to estimate percentage
+		// complete
 		for (ClassNode classNode : classMethods) {
 			int size = classNode.getChildrenAsCN().size();
-			numMethods += size;
-			totalComparisons += (size * (size - 1)) / 2;
+			totalComparisons += size * (size - 1) / 2;
 		}
+		// process each class sequentially
 		System.out.println(totalComparisons);
 		for (ClassNode classNode : classMethods) {
 			processClass(classNode);
 		}
+		System.out.println(testPrintEnd);
 	}
 
 	/**
-	 * Compares all the methods in the class with one another, merging them into
-	 * one method if possible. TODO modify implementation to group methods into
-	 * larger than binary pairs.
-	 * 
+	 * Reads in the contents of the file associated with the thread. This file
+	 * is then {@link PluginInterface#parse(CharStream) parsed}, and the
+	 * {@link PluginInterface#getClasses() classes} are returned.
+	 *
+	 * @return the classes in the file
+	 * @throws IOException
+	 */
+	private ArrayList<ClassNode> parseFile() throws IOException {
+		Helper.printToSTD("Reading file", f.getName());
+		CharStream contents;
+		contents = Helper.readFile(f);
+
+		Helper.printToSTD("Read file, Parsing contents", f.getName());
+		plugin.parse(contents);
+
+		Helper.printToSTD("File Parsed, Extracting functions", f.getName());
+		return plugin.getClasses();
+	}
+
+	/**
+	 * Compares all the functions in the class with one another, merging them
+	 * into one function if possible. TODO modify implementation to group
+	 * functions into larger than binary pairs.
+	 *
 	 * @param classNode
 	 *            containing the class to be processed
 	 */
 	private void processClass(ClassNode classNode) {
-		ArrayList<ArrayList<List<int[]>>> comps = new ArrayList<>();
-		ArrayList<ClassNode> methods = classNode.getChildrenAsCN();
+		testPrintEnd += classNode.getIdentifier() + "\n";
+		// Generate a list of mappings between similar methods
+		ArrayList<ClassNode> functions = classNode.getChildrenAsCN();
 		if (Helper.verbose) {
-			Helper.printToSTD("Comparing methods from " + classNode.getIdentifier(), "\n" + f.getName());
+			Helper.printToSTD("Comparing functions from " + classNode.getIdentifier(), "\n" + f.getName());
 		}
-		for (int i = 0; i < methods.size() - 1; i++) {
-			comps.add(new ArrayList<>());
-			for (int j = i + 1; j < methods.size(); j++) {
-				List<int[]> comp = compareMethods(methods.get(i), methods.get(j));
-				if (comp != null) {
-					comps.get(i).add(comp);
+
+		FunctionMappings comps = compareAllMethods(functions);
+		testPrintEnd += "\tMatches: " + comps.toString() + "\n";
+
+		// group mappings
+		ArrayList<MergeGroup> mergeGroups = generateMergeGroups(comps, functions);
+		testPrintEnd += "\tGroups:\n";
+		try {
+			System.out.println(classNode.getIdentifier());
+			int pos = plugin.getClassStartLine(classNode, new BufferedReader(new FileReader(f)));
+			for (MergeGroup mg : mergeGroups) {
+				testPrintEnd += "\t\t" + mg.getMethodHeaders() + "\n";
+				testPrintEnd += "\t" + mg.printShardeCode().replaceAll("\n", "\n\t");
+				for (ClassNode c : mg.getFunctions()) {
+					FunctionPos fp = plugin.getPositionInFile(c, new BufferedReader(new FileReader(f)), pos);
 				}
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		}
+		testPrintEnd += "\t";
+
+
+
+		// for (Entry<FunctionPair, List<int[]>> pair : comps.entrySet()) {
+		// List<int[]> list = pair.getValue();
+		// ClassNode function1 = functions.get(Math.min(pair.getKey().function1,
+		// pair.getKey().function2));
+		// ClassNode function2 = functions.get(Math.max(pair.getKey().function1,
+		// pair.getKey().function2));
+		//
+		// Helper.printToSTD("\t" + Arrays.deepToString(list.toArray()));
+		// Helper.printToSTD(function1.print("\t", true));
+		// Helper.printToSTD(function2.print("\t", true));
+		// mergeMethods(function1, function2, list);
+		// }
+
+	}
+
+	/**
+	 * Compares all pairs of methods in a class, and will return the mapping of
+	 * all pairs that are sufficiently similar
+	 *
+	 * @param functions
+	 *            A list of the functions to compare
+	 * @return mapping of the pairs of methods that are sufficiently similar
+	 */
+	private FunctionMappings compareAllMethods(ArrayList<ClassNode> functions) {
+		FunctionMappings mappings = new FunctionMappings(functions);
+		// Iterate over every pair of functions in the class
+		for (int i = 0; i < functions.size() - 1; i++) {
+			for (int j = i + 1; j < functions.size(); j++) {
+				// compare the methods, if they are sufficiently similar store
+				// thier mapping
+				List<int[]> comp = compareMethods(functions.get(i), functions.get(j), false);
+				if (comp != null) {
+					mappings.addRelations(i, j, comp);
+				}
+				// Check how many comparisons have been done
+				// print current percentage at intervals of 1%, when reached
 				comparisonsDone++;
-				double perDone = ((double) comparisonsDone) / ((double) totalComparisons);
+				double perDone = (double) comparisonsDone / (double) totalComparisons;
 				if (perDone > perShown + 0.01) {
 					perShown = Math.floor(perDone * 100) / 100;
 					System.out.printf("%.2f%%\n", perShown);
 				}
 			}
 		}
-
+		return mappings;
 	}
 
 	/**
-	 * Compares two classNodes. This returns a mapping between the two methods.
-	 * Or null if they are not sufficiently similar. The mapping [a,b] states
-	 * that the a'th node in the smaller method is the same as the b'th node in
-	 * the larger. The positioning uses post order staring at 1. If a node is
-	 * mapped with 0 as a pair then it is unique to that method.
-	 * 
-	 * @param method1
-	 *            first method to compare
-	 * @param method2
-	 *            second method to be compared
+	 * Compares two classNodes. This returns a mapping between the two
+	 * functions. Or null if they are not sufficiently similar. The mapping
+	 * [a,b] states that the a'th node in the smaller function is the same as
+	 * the b'th node in the larger. The positioning uses post order staring at
+	 * 1. If a node is mapped with 0 as a pair then it is unique to that
+	 * function.
+	 *
+	 * @param function1
+	 *            first function to compare
+	 * @param function2
+	 *            second function to be compared
+	 *
+	 * @param forceComputeMapping
+	 *            if true, will not skip computing edit mapping
 	 * @return the difference mapping between the two nodes, Or null if they are
 	 *         too different.
 	 */
-	private List<int[]> compareMethods(ClassNode method1, ClassNode method2) {
-		int s1 = method1.getSize();
-		int s2 = method2.getSize();
-		// if one method is too large for minPer to be reached don't compute
-		if (s1 < s2 * minPer || s2 < s1 * minPer) {
+	private List<int[]> compareMethods(ClassNode function1, ClassNode function2, boolean forceComputeMapping) {
+		// check required characteristics match
+		if (!function1.compareMustMatch(function2))
 			return null;
-		}
+		int s1 = function1.getSize();
+		int s2 = function2.getSize();
+
+		// If one function is too large for minPer to be reached don't compute
+		if (s1 < s2 * minPer || s2 < s1 * minPer)
+			return null;
+
+		// Get the distance of the smaller function to the larger function
 		float editDistance;
 		if (s1 > s2) {
-			editDistance = apted.computeEditDistance(method2, method1);
+			editDistance = apted.computeEditDistance(function2, function1);
 		} else {
-			editDistance = apted.computeEditDistance(method1, method2);
+			editDistance = apted.computeEditDistance(function1, function2);
 		}
 
-		int maxSize = Math.max(method1.getSize(), method2.getSize());
+		// If the distance is not a large enough percentage of the larger method
+		// and it is not being forced, don't compute the mapping
+		int maxSize = Math.max(function1.getSize(), function2.getSize());
 		float diffValue = (maxSize - editDistance) / maxSize;
-		if (diffValue < minPer) {
+		if (!forceComputeMapping && diffValue < minPer)
 			return null;
-		}
-		Helper.printToSTD(method1.getIdentifier() + " " + method2.getIdentifier() + ": " + diffValue + "%",
+
+		// Compute and return the mapping
+		Helper.printToSTD(function1.getIdentifier() + " " + function2.getIdentifier() + ": " + diffValue + "%",
 				"\t" + f.getName());
 		LinkedList<int[]> list = apted.computeEditMapping();
-		Helper.printToSTD("\t" + Arrays.deepToString(list.toArray()));
-		if (s1 > s2) {
-			Helper.printToSTD(method2.print("\t", true));
-			Helper.printToSTD(method1.print("\t", true));
-			// Helper.printToSTD(mergeMethods(method2, method1,
-			// list).print("\t", true));
-			mergeMethods(method2, method1, list);
-		} else {
-			Helper.printToSTD(method1.print("\t", true));
-			Helper.printToSTD(method2.print("\t", true));
-			// Helper.printToSTD(mergeMethods(method1, method2,
-			// list).print("\t", true));
-			mergeMethods(method1, method2, list);
-		}
-
 		return list;
 	}
 
+
+
+
+
+
 	/**
-	 * Merges two methods into one using the specified mapping.
-	 * 
-	 * TODO complete implementation
-	 * 
-	 * @param method1
-	 *            the smaller method to be mapped
-	 * @param method2
-	 *            the larger method to be mapped
-	 * @param mapping
-	 *            between the two methods
-	 * @return a new {@link ClassNode} that behaves the same as
+	 * Identifies groups of methods that are similar and converts them into
+	 * merge groups.
+	 *
+	 *
+	 * @param mappings
+	 *            comparisons of methods, 2D hashmap, such that x,y refers the
+	 *            mapping between method at pos x and method at pos y in
+	 *            function methods
+	 * @param functions
+	 *            parsed functions that have their relationship mapped in comps.
+	 * @return
 	 */
-	private ClassNode mergeMethods(ClassNode method1, ClassNode method2, List<int[]> mapping) {
-		ClassNode shared = new ClassNode(method1);
-		ArrayList<ClassNode>[] mergeCandidates = getMergeCandidates(shared, method2, mapping);
-		ArrayList<ClassNode> candidatesFrom1 = mergeCandidates[0];
-		ArrayList<ClassNode> candidatesFrom2 = mergeCandidates[1];
+	private ArrayList<MergeGroup> generateMergeGroups(FunctionMappings mappings,
+			ArrayList<ClassNode> functions) {
 
-		Helper.printToSTD("\tShared Code");
-		Helper.printToSTD(shared.print("\t\t", true));
-		Helper.printToSTD("\tcandidates from 1");
-		for (ClassNode c : candidatesFrom1) {
-			Helper.printToSTD(c.print("\t\t", true));
+		ArrayList<MergeGroup> mergeGroups = new ArrayList<>();
+		ArrayList<ArrayList<Integer>> groups = mappings.groupFunctions();
+
+		for (ArrayList<Integer> gi : groups) {
+			mergeGroups.add(buildMergeGroup(gi, mappings));
 		}
-		Helper.printToSTD("\tcandidates from 2");
-
-		for (ClassNode c : candidatesFrom2) {
-			Helper.printToSTD(c.print("\t\t", true));
-		}
-
-		return null;
+		return mergeGroups;
 	}
 
-	/**
-	 * Retrieves the root nodes of subtrees that are unique to each method.
-	 * method 1 is also converted into a tree containing the shared nodes.
-	 * 
-	 * @param method1
-	 *            the smaller method to get the merge candidates out of. Also
-	 *            all unique nodes will be removed.
-	 * @param method2
-	 *            the larger method to get the merge candidates from.
-	 * @param mapping
-	 *            between the two
-	 * @return an array containing the roots of the unique subtrees.
-	 */
-	private ArrayList<ClassNode>[] getMergeCandidates(ClassNode method1, ClassNode method2, List<int[]> mapping) {
-		HashSet<Integer> set1 = new HashSet<>();
-		HashSet<Integer> set2 = new HashSet<>();
-		ArrayList<ClassNode>[] mergeCandidates = new ArrayList[2];
-		for (int[] map : mapping) {
-			if (map[0] == 0) {
-				set2.add(map[1]);
-			} else if (map[1] == 0) {
-				set1.add(map[0]);
+	private MergeGroup buildMergeGroup(ArrayList<Integer> groupPos, FunctionMappings mappings) {
+		ArrayList<List<int[]>> relations = new ArrayList<>();
+		for (int j = 0; j < groupPos.size(); j++) {
+			for (int k = j + 1; k < groupPos.size(); k++) {
+				List<int[]> mapping = mappings.getMapping(j, k);
+				if (mapping == null) {
+					mapping = compareMethods(mappings.getFunctionNode(j), mappings.getFunctionNode(k), true);
+					mappings.addRelations(j, k, mapping);
+				}
+				relations.add(mapping);
 			}
 		}
-		mergeCandidates[0] = method1.getMinimalNodesFromPostOrder(set1, true);
-		mergeCandidates[1] = method2.getMinimalNodesFromPostOrder(set2, false);
+		ArrayList<ClassNode> classes = new ArrayList<>();
+		for (int i : groupPos) {
+			classes.add(mappings.getFunctionNode(i));
+		}
 
-		return mergeCandidates;
+		return new MergeGroup(classes, relations);
 	}
 
+
+	// /**
+	// * Retrieves the root nodes of subtrees that are unique to each function.
+	// * function 1 is also converted into a tree containing the shared nodes.
+	// *
+	// * @param function1
+	// * the smaller function to get the merge candidates out of. Also
+	// * all unique nodes will be removed.
+	// * @param function2
+	// * the larger function to get the merge candidates from.
+	// * @param mapping
+	// * between the two
+	// * @return an array containing the roots of the unique subtrees.
+	// */
+	// private ArrayList<ClassNode>[] getMergeCandidates(ClassNode function1,
+	// ClassNode function2, List<int[]> mapping) {
+	// HashSet<Integer> set1 = new HashSet<>();
+	// HashSet<Integer> set2 = new HashSet<>();
+	// ArrayList<ClassNode>[] mergeCandidates = new ArrayList[2];
+	// for (int[] map : mapping) {
+	// if (map[0] == 0) {
+	// set2.add(map[1]);
+	// } else if (map[1] == 0) {
+	// set1.add(map[0]);
+	// }
+	// }
+	// mergeCandidates[0] = function1.getMinimalNodesFromPostOrder(set1, true);
+	// mergeCandidates[1] = function2.getMinimalNodesFromPostOrder(set2, false);
+	//
+	// return mergeCandidates;
+	// }
+	//
+	// /**
+	// * Merges two functions into one using the specified mapping.
+	// *
+	// * TODO complete implementation
+	// *
+	// * @param function1
+	// * the smaller function to be mapped
+	// * @param function2
+	// * the larger function to be mapped
+	// * @param mapping
+	// * between the two functions
+	// * @return a new {@link ClassNode} that behaves the same as
+	// */
+	// private ClassNode mergeMethods(ClassNode function1, ClassNode function2,
+	// List<int[]> mapping) {
+	// ClassNode shared = new ClassNode(function1);
+	// ArrayList<ClassNode>[] mergeCandidates = getMergeCandidates(shared,
+	// function2, mapping);
+	// ArrayList<ClassNode> candidatesFrom1 = mergeCandidates[0];
+	// ArrayList<ClassNode> candidatesFrom2 = mergeCandidates[1];
+	//
+	// Helper.printToSTD("\tShared Code");
+	// Helper.printToSTD(shared.print("\t\t", true));
+	// Helper.printToSTD("\tcandidates from 1");
+	// for (ClassNode c : candidatesFrom1) {
+	// Helper.printToSTD(c.print("\t\t", true));
+	// }
+	// Helper.printToSTD("\tcandidates from 2");
+	//
+	// for (ClassNode c : candidatesFrom2) {
+	// Helper.printToSTD(c.print("\t\t", true));
+	// }
+	//
+	// return null;
+	// }
 }
