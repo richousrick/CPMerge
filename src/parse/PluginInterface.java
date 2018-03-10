@@ -8,6 +8,9 @@ import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import dif.ClassNode;
+import merge.ClassNodeSkeleton;
+import merge.IntermdiateAST;
+import merge.MergeGroup;
 import ref.FunctionPos;
 
 /**
@@ -56,7 +59,16 @@ public interface PluginInterface {
 
 	public PluginInterface generateInstance();
 
-	public void preMerge();
+	/**
+	 * ran before the {@link MergeGroup#buildMergeFunction()} processes the
+	 * unique sets.
+	 * This can be used to validate and or tidy up the structure of the unique
+	 * set's before processing.
+	 *
+	 * @param root
+	 *            node of the {@link IntermdiateAST}
+	 */
+	public void preMerge(ClassNodeSkeleton root);
 
 	public void postMerge();
 
@@ -82,8 +94,9 @@ public interface PluginInterface {
 	 *            to convert to code
 	 * @return a textual representation of the AST inside the {@link ClassNode}
 	 */
-	public String prettyPrint(ClassNode c);
+	public String prettyPrint(ClassNodeSkeleton functionStructure);
 
 	public int getClassStartLine(ClassNode classRoot, BufferedReader in);
 
+	public String genFunctionName(ArrayList<ClassNode> functions);
 }

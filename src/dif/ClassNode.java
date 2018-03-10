@@ -51,6 +51,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 * 1 : method head<br>
 	 * 2 : statement<br>
 	 * 3 : temporary<br>
+	 * 4 : merge point
 	 */
 	private final byte type;
 
@@ -74,11 +75,23 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 *            node to be deep copied.
 	 */
 	public ClassNode(ClassNode toCopy) {
+		this(toCopy, 0);
+		for (final ClassNode c : toCopy.getChildrenAsCN()) {
+			addChild(new ClassNode(c));
+		}
+	}
+
+	/**
+	 * Copys the content of toCopy, not including its children
+	 * @param toCopy Node to copy
+	 * @param shallowCopyFlag only used to specify this constructor
+	 */
+	public ClassNode(ClassNode toCopy, int noChildrenFlag){
 		super(toCopy.getNodeData());
 		type = toCopy.type;
 		identifier = new String(toCopy.identifier);
-		for (final ClassNode c : toCopy.getChildrenAsCN()) {
-			addChild(new ClassNode(c));
+		if(toCopy.mustMatch!=null) {
+			mustMatch = new String(toCopy.mustMatch);
 		}
 	}
 
@@ -245,7 +258,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 	}
 
 	/**
-	 * @return the type
+	 * @return the {@link #type}
 	 */
 	public byte getType() {
 		return type;
@@ -280,7 +293,22 @@ public class ClassNode extends Node<ParserRuleContext> {
 				c.compressClass(false);
 			}
 		}
-		setPostOrderList();
+		setPostOrderList(1);
+	}
+
+	public ClassNode getPostOrderDecendant(int postOrderPos) {
+		if (pos == postOrderPos)
+			return this;
+		ClassNode root = this;
+		while (root.type != 1 && root.parent != null) {
+			root = root.parent;
+		}
+
+		if(root.PORepresentation[postOrderPos - 1].pos!=postOrderPos){
+			System.err.println(root.PORepresentation[postOrderPos - 1].pos+"!="+postOrderPos);
+		}
+
+		return root.PORepresentation[postOrderPos - 1];
 	}
 
 	/**
@@ -305,15 +333,25 @@ public class ClassNode extends Node<ParserRuleContext> {
 		}
 	}
 
-	private void setPostOrderList() {
+	private void setPostOrderList(int start) {
+		int curr = start;
 		ArrayList<ClassNode> postOrderList = new ArrayList<>();
 		for (ClassNode child : getChildrenAsCN()) {
-			child.setPostOrderList();
+			if(type==0){
+				curr=start;
+			}
+			child.setPostOrderList(curr);
+			if(child.getType()!=0) {
+				curr = child.pos+1;
+			}
 			postOrderList.addAll(new ArrayList<ClassNode>(Arrays.asList(child.getPostOrderList())));
 		}
 		postOrderList.add(this);
 		PORepresentation = new ClassNode[postOrderList.size()];
 		postOrderList.toArray(PORepresentation);
+		if(type!=0) {
+			pos = curr;
+		}
 	}
 
 	public ClassNode[] getPostOrderList() {
@@ -443,6 +481,18 @@ public class ClassNode extends Node<ParserRuleContext> {
 			return c.mustMatch.equals(mustMatch);
 		else
 			return false;
+	}
+
+	public int getPostOrderPos() {
+		return pos;
+	}
+
+	public String getChildIndetifierRecursive() {
+		String identifier = "";
+		for (ClassNode c : getChildrenAsCN()) {
+			identifier += "." + c.getIdentifier() + c.getChildIndetifierRecursive();
+		}
+		return identifier;
 	}
 
 }

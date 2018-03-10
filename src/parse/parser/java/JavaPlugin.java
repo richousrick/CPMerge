@@ -13,6 +13,7 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 import dif.ClassNode;
+import merge.ClassNodeSkeleton;
 import parse.PluginInterface;
 import parse.ResoultionPattern;
 import parse.parser.java.comp.ASTExtractor;
@@ -199,17 +200,16 @@ public class JavaPlugin implements PluginInterface {
 	 * @see parse.PluginInterface#preMerge()
 	 */
 	@Override
-	public void preMerge() {
-		// TODO Auto-generated method stub
-
+	public void preMerge(ClassNodeSkeleton root) {
 	}
+
 
 	/*
 	 * (non-Javadoc)
 	 * @see parse.PluginInterface#postMerge()
 	 */
 	@Override
-	public void postMerge() {
+	public void postMerge(ClassNodeSkeleton root) {
 		// TODO Auto-generated method stub
 
 	}
@@ -308,9 +308,40 @@ public class JavaPlugin implements PluginInterface {
 	 * @see parse.PluginInterface#prettyPrint(dif.ClassNode)
 	 */
 	@Override
-	public String prettyPrint(ClassNode c) {
-		// TODO Auto-generated method stub
-		return null;
+	public String prettyPrint(ClassNodeSkeleton c) {
+		return "";
+	}
+
+
+	/**
+	 * TODO Annotate method
+	 *
+	 * @param parserRuleContext
+	 * @param p
+	 * @param parentMerge
+	 *            if the parent of this node is a mergePoint
+	 * @return
+	 */
+	private String getNodeAsString(ParserRuleContext parserRuleContext, PrettyPrinter p, boolean parentMerge) {
+		// check type is in certan cases e.g. assignment
+
+		return p.visit(parserRuleContext);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#genFunctionName(dif.ClassNode[])
+	 */
+	@Override
+	public String genFunctionName(ArrayList<ClassNode> classes) {
+		String retString = "";
+		for (ClassNode c : classes) {
+			retString += c.getIdentifier().substring(0, 1).toUpperCase();
+			if (c.getIdentifier().length() > 1) {
+				retString += c.getIdentifier().substring(1);
+			}
+		}
+		return retString;
 	}
 
 }

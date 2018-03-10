@@ -3,10 +3,7 @@
  */
 package merge;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -19,7 +16,6 @@ import dif.APTEDCostModel;
 import dif.ClassNode;
 import distance.APTED;
 import parse.PluginInterface;
-import ref.FunctionPos;
 import ref.Helper;
 
 /**
@@ -75,15 +71,17 @@ public class MergeThread implements Runnable {
 				for (ClassNode n : functions.getChildrenAsCN()) {
 					functionsString += n.getIdentifier() + ",";
 				}
+				if(functionsString.length()>1){
+					functionsString = functionsString.substring(0, functionsString.length() - 1);
+				}
 				Helper.printToSTD("Found class \"" + functions.getIdentifier() + "\" containing functions "
-						+ functionsString.substring(0, functionsString.length() - 1));
+						+ functionsString);
 			}
 		}
 
 
 		Helper.printToSTD("Building costModel", f.getName());
 		apted = new APTED<APTEDCostModel, ParserRuleContext>(new APTEDCostModel());
-
 
 		Helper.printToSTD("Methods Extracted, Searching for matches", f.getName());
 		// Count number of comparisons to be done - used to estimate percentage
@@ -142,18 +140,13 @@ public class MergeThread implements Runnable {
 		// group mappings
 		ArrayList<MergeGroup> mergeGroups = generateMergeGroups(comps, functions);
 		testPrintEnd += "\tGroups:\n";
-		try {
-			System.out.println(classNode.getIdentifier());
-			int pos = plugin.getClassStartLine(classNode, new BufferedReader(new FileReader(f)));
-			for (MergeGroup mg : mergeGroups) {
-				testPrintEnd += "\t\t" + mg.getMethodHeaders() + "\n";
-				testPrintEnd += "\t" + mg.printShardeCode().replaceAll("\n", "\n\t");
-				for (ClassNode c : mg.getFunctions()) {
-					FunctionPos fp = plugin.getPositionInFile(c, new BufferedReader(new FileReader(f)), pos);
-				}
-			}
-		} catch (FileNotFoundException e) {
-			e.printStackTrace();
+		for (MergeGroup mg : mergeGroups) {
+			testPrintEnd += "\t\t" + mg.getMethodHeaders() + "\n";
+			testPrintEnd += "\t" + mg.printSharedCode().replaceAll("\n", "\n\t") + "\n";
+
+			System.out.println(mg.getMethodHeaders());
+			ClassNodeSkeleton root = mg.buildMergeFunction();
+			System.out.println(plugin.prettyPrint(root));
 		}
 		testPrintEnd += "\t";
 
@@ -253,11 +246,27 @@ public class MergeThread implements Runnable {
 		// Compute and return the mapping
 		Helper.printToSTD(function1.getIdentifier() + " " + function2.getIdentifier() + ": " + diffValue + "%",
 				"\t" + f.getName());
-		LinkedList<int[]> list = apted.computeEditMapping();
+
+
+		LinkedList<int[]> list;
+		if (s1 > s2) {
+			list = flipList(apted.computeEditMapping());
+		} else {
+			list = apted.computeEditMapping();
+		}
 		return list;
 	}
 
-
+	private LinkedList<int[]> flipList(List<int[]> list){
+		LinkedList<int[]> retList = new LinkedList();
+		for(int[] i :list){
+			int[] li = new int[2];
+			li[0] = i[1];
+			li[1] = i[0];
+			retList.add(li);
+		}
+		return retList;
+	}
 
 
 
@@ -291,7 +300,7 @@ public class MergeThread implements Runnable {
 		ArrayList<List<int[]>> relations = new ArrayList<>();
 		for (int j = 0; j < groupPos.size(); j++) {
 			for (int k = j + 1; k < groupPos.size(); k++) {
-				List<int[]> mapping = mappings.getMapping(j, k);
+				List<int[]> mapping = mappings.getMapping(groupPos.get(j), groupPos.get(k));
 				if (mapping == null) {
 					mapping = compareMethods(mappings.getFunctionNode(j), mappings.getFunctionNode(k), true);
 					mappings.addRelations(j, k, mapping);
@@ -304,7 +313,7 @@ public class MergeThread implements Runnable {
 			classes.add(mappings.getFunctionNode(i));
 		}
 
-		return new MergeGroup(classes, relations);
+		return new MergeGroup(classes, relations, plugin);
 	}
 
 
