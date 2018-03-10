@@ -114,6 +114,56 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 		return root;
 	}
 
+	class ConvertReturns {
+		ClassNode node;
+		String current;
+
+		/**
+		 * Initializes the ASTExtractor.ConvertReturns class
+		 * TODO Annotate constructor
+		 */
+		public ConvertReturns(ClassNode node, String current) {
+			this.node = node;
+			this.current = current;
+		}
+
+	}
+
+	/**
+	 * Converts the AST to contain only Statements
+	 * 
+	 * @param classNode
+	 *            root of the AST to convert
+	 * @return an AST containing only Statements
+	 */
+	private ConvertReturns convert(ClassNode classNode) {
+		String current = "";
+		ArrayList<ClassNode> children = new ArrayList<>();
+		for (ClassNode child : classNode.getChildrenAsCN()) {
+			ConvertReturns ret = convert(child);
+			if (ret.current.trim().length() > 0) {
+				current += ret.current.trim() + " ";
+			}
+			if (ret.node != null) {
+				children.add(ret.node);
+			}
+		}
+		ClassNode retClassNode = null;
+		if (classNode.getType() == 3) {
+			if (current.length() == 0) {
+				current = classNode.getIdentifier();
+			}
+			retClassNode = new ClassNode(classNode.getNodeData(), current);
+			for (ClassNode c : children) {
+				retClassNode.addChild(c);
+			}
+			current = "";
+		} else {
+			current = classNode.getIdentifier() + " " + current;
+		}
+		return new ConvertReturns(retClassNode, current);
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see
@@ -495,7 +545,7 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 	 */
 	@Override
 	public ClassNode visitBlockStatement(BlockStatementContext ctx) {
-		ClassNode c = new ClassNode(ctx, "BlockStatement");
+		ClassNode c = new ClassNode(ctx, "BlockStatement", (byte) 3);
 		if (ctx.localTypeDeclaration() != null) {
 			c.addChild(visitLocalTypeDeclaration(ctx.localTypeDeclaration()));
 		} else if (ctx.statement() != null) {
@@ -504,7 +554,7 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 		if (ctx.localVariableDeclaration() != null) {
 			c.addChild(visitLocalVariableDeclaration(ctx.localVariableDeclaration()));
 		}
-		return c;
+		return convert(c).node;
 	}
 
 	/*
@@ -561,7 +611,7 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 	 */
 	@Override
 	public ClassNode visitStatement(StatementContext ctx) {
-		ClassNode c = new ClassNode(ctx, "statement");
+		ClassNode c = new ClassNode(ctx, "statement", (byte) 3);
 		if (ctx.ASSERT() != null) {
 			c.addChild(ctx.ASSERT());
 			for (ExpressionContext exp : ctx.expression()) {
@@ -570,10 +620,16 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 		} else if (ctx.IF() != null) {
 			c.addChild(ctx.IF());
 			c.addChild(visitParExpression(ctx.parExpression()));
-			c.addChild(visitStatement(ctx.statement(0)));
+			ClassNode then = visitStatement(ctx.statement(0));
+			ClassNode firstChild = then.getChildrenAsCN().get(0);
+			firstChild.setIdentifier("then." + firstChild.getIdentifier());
+			c.addChild(then);
 			if (ctx.ELSE() != null) {
 				c.addChild(ctx.ELSE());
-				c.addChild(visitStatement(ctx.statement(1)));
+				ClassNode elseS= visitStatement(ctx.statement(1));
+				firstChild = elseS.getChildrenAsCN().get(0);
+				firstChild.setIdentifier("else." + firstChild.getIdentifier());
+				c.addChild(elseS);
 			}
 		} else if (ctx.FOR() != null) {
 			c.addChild(ctx.FOR());
