@@ -70,7 +70,7 @@ public interface PluginInterface {
 	 */
 	public void preMerge(ClassNodeSkeleton root);
 
-	public void postMerge();
+	public void postMerge(ClassNodeSkeleton root);
 
 	/**
 	 * Gets the position of a function in a file
@@ -99,4 +99,6 @@ public interface PluginInterface {
 	public int getClassStartLine(ClassNode classRoot, BufferedReader in);
 
 	public String genFunctionName(ArrayList<ClassNode> functions);
+
+	public String updateFunctionName(ClassNodeSkeleton originalRoot, ClassNodeSkeleton newRoot, int fID, String code);
 }

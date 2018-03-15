@@ -162,7 +162,7 @@ public class MergeGroup {
 		// }
 
 		// remove the shared nodes
-		uniqueSets.remove(sharedId);
+		UniqueSet complete = uniqueSets.remove(sharedId);
 
 
 		HashMap<IntermdiateAST, ArrayList<ClassNodeSkeleton>> sisterNodes = groupByParent(uniqueSets);
@@ -186,19 +186,17 @@ public class MergeGroup {
 
 		// iterate over all groups converting them to mergeGroups
 
-		//TODO make happen in above
-		// TODO ensure order merge nodes
+
 		for(ArrayList<ArrayList<ClassNodeSkeleton>> currMergeGroup: shareSisterGroups){
 			HashMap<UniqueSet, ArrayList<ClassNodeSkeleton>> mergeOptions = new HashMap<>();
 			for(ArrayList<ClassNodeSkeleton> groupOption : currMergeGroup){
-				mergeOptions.put(groupOption.get(0).uniqueSet, groupOption);
+				mergeOptions.put(groupOption.get(0).set, groupOption);
 			}
 
 			new MergePoint(mergeOptions, MergeGroup.this);
 		}
 
-		// System.out.println(root.simpleCodeRepresentation());
-
+		root.setUniqueSetR(complete);
 		return root;
 	}
 
@@ -443,7 +441,7 @@ public class MergeGroup {
 	private ArrayList<UniqueSet> getSets(ArrayList<ClassNodeSkeleton> cnsList) {
 		ArrayList<UniqueSet> retList = new ArrayList<>();
 		for (ClassNodeSkeleton cns : cnsList) {
-			retList.add(cns.uniqueSet);
+			retList.add(cns.set);
 		}
 		return retList;
 	}

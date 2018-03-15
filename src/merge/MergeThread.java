@@ -147,23 +147,15 @@ public class MergeThread implements Runnable {
 			System.out.println(mg.getMethodHeaders());
 			ClassNodeSkeleton root = mg.buildMergeFunction();
 			System.out.println(plugin.prettyPrint(root));
+
+			// add code to files
+			// log method name changes
+
 		}
 		testPrintEnd += "\t";
 
 
 
-		// for (Entry<FunctionPair, List<int[]>> pair : comps.entrySet()) {
-		// List<int[]> list = pair.getValue();
-		// ClassNode function1 = functions.get(Math.min(pair.getKey().function1,
-		// pair.getKey().function2));
-		// ClassNode function2 = functions.get(Math.max(pair.getKey().function1,
-		// pair.getKey().function2));
-		//
-		// Helper.printToSTD("\t" + Arrays.deepToString(list.toArray()));
-		// Helper.printToSTD(function1.print("\t", true));
-		// Helper.printToSTD(function2.print("\t", true));
-		// mergeMethods(function1, function2, list);
-		// }
 
 	}
 
@@ -316,71 +308,8 @@ public class MergeThread implements Runnable {
 		return new MergeGroup(classes, relations, plugin);
 	}
 
+	private void writeMergedFunction(String function) {
 
-	// /**
-	// * Retrieves the root nodes of subtrees that are unique to each function.
-	// * function 1 is also converted into a tree containing the shared nodes.
-	// *
-	// * @param function1
-	// * the smaller function to get the merge candidates out of. Also
-	// * all unique nodes will be removed.
-	// * @param function2
-	// * the larger function to get the merge candidates from.
-	// * @param mapping
-	// * between the two
-	// * @return an array containing the roots of the unique subtrees.
-	// */
-	// private ArrayList<ClassNode>[] getMergeCandidates(ClassNode function1,
-	// ClassNode function2, List<int[]> mapping) {
-	// HashSet<Integer> set1 = new HashSet<>();
-	// HashSet<Integer> set2 = new HashSet<>();
-	// ArrayList<ClassNode>[] mergeCandidates = new ArrayList[2];
-	// for (int[] map : mapping) {
-	// if (map[0] == 0) {
-	// set2.add(map[1]);
-	// } else if (map[1] == 0) {
-	// set1.add(map[0]);
-	// }
-	// }
-	// mergeCandidates[0] = function1.getMinimalNodesFromPostOrder(set1, true);
-	// mergeCandidates[1] = function2.getMinimalNodesFromPostOrder(set2, false);
-	//
-	// return mergeCandidates;
-	// }
-	//
-	// /**
-	// * Merges two functions into one using the specified mapping.
-	// *
-	// * TODO complete implementation
-	// *
-	// * @param function1
-	// * the smaller function to be mapped
-	// * @param function2
-	// * the larger function to be mapped
-	// * @param mapping
-	// * between the two functions
-	// * @return a new {@link ClassNode} that behaves the same as
-	// */
-	// private ClassNode mergeMethods(ClassNode function1, ClassNode function2,
-	// List<int[]> mapping) {
-	// ClassNode shared = new ClassNode(function1);
-	// ArrayList<ClassNode>[] mergeCandidates = getMergeCandidates(shared,
-	// function2, mapping);
-	// ArrayList<ClassNode> candidatesFrom1 = mergeCandidates[0];
-	// ArrayList<ClassNode> candidatesFrom2 = mergeCandidates[1];
-	//
-	// Helper.printToSTD("\tShared Code");
-	// Helper.printToSTD(shared.print("\t\t", true));
-	// Helper.printToSTD("\tcandidates from 1");
-	// for (ClassNode c : candidatesFrom1) {
-	// Helper.printToSTD(c.print("\t\t", true));
-	// }
-	// Helper.printToSTD("\tcandidates from 2");
-	//
-	// for (ClassNode c : candidatesFrom2) {
-	// Helper.printToSTD(c.print("\t\t", true));
-	// }
-	//
-	// return null;
-	// }
+	}
+
 }

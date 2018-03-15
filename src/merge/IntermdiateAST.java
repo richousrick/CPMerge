@@ -1,6 +1,7 @@
 package merge;
 
 import java.util.ArrayList;
+import java.util.Map.Entry;
 
 import dif.ClassNode;
 
@@ -12,24 +13,33 @@ import dif.ClassNode;
  * @author Rikkey Paal
  */
 public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
+
 	/**
-	 *
+	 * What the unique set of the node is
+	 * if null then belongs to all sets
 	 */
+	protected UniqueSet set = null;
+
+	protected final ArrayList<IntermdiateAST> children = new ArrayList<>();
+	protected IntermdiateAST parent;
 	private final MergeGroup mergeGroup;
 
+	/**
+	 * @return the mergeGroup
+	 */
+	public MergeGroup getMergeGroup() {
+		return mergeGroup;
+	}
 
 	/**
 	 * Initializes the IntermdiateAST class
 	 * TODO Annotate constructor
+	 *
 	 * @param mergeGroup
 	 */
-	IntermdiateAST(MergeGroup mergeGroup) {
+	public IntermdiateAST(MergeGroup mergeGroup) {
 		this.mergeGroup = mergeGroup;
 	}
-
-	ArrayList<IntermdiateAST> children = new ArrayList<>();
-	IntermdiateAST parent;
-
 
 	public void setParent(IntermdiateAST parent) {
 		if (this.parent != null) {
@@ -37,6 +47,7 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 		}
 		this.parent = parent;
 		parent.children.add(this);
+		updateUniqueSet();
 	}
 
 	public void setParent(int childPos, IntermdiateAST parent) {
@@ -45,10 +56,29 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 		}
 		this.parent = parent;
 		parent.children.add(childPos, this);
+		updateUniqueSet();
 	}
 
 	public void removeChild(IntermdiateAST c) {
 		children.remove(c);
+	}
+
+	public UniqueSet getUniqueSet() {
+		return set;
+	}
+
+	private void updateUniqueSet() {
+		if (parent instanceof MergePoint) {
+			for (Entry<UniqueSet, ArrayList<ClassNodeSkeleton>> sets : ((MergePoint) parent).getMergeOptions()
+					.entrySet()) {
+				if (sets.getValue().contains(this)) {
+					set = sets.getKey();
+					return;
+				}
+			}
+		} else {
+			set = parent.set;
+		}
 	}
 
 	/**
@@ -59,6 +89,7 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 	public IntermdiateAST getParent() {
 		return parent;
 	}
+
 
 	/**
 	 * @return the children
@@ -105,4 +136,20 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 	}
 
 	abstract public String simpleCodeRepresentation();
+
+	public void setUniqueSetR(UniqueSet uniqueSet) {
+		setUniqueSet(uniqueSet);
+		for (IntermdiateAST child : children) {
+			if (child instanceof ClassNodeSkeleton) {
+				child.setUniqueSet(set);
+			} else {
+				child.updateUniqueSet();
+			}
+		}
+	}
+
+	public void setUniqueSet(UniqueSet uniqueSet) {
+		set = uniqueSet;
+	}
+
 }

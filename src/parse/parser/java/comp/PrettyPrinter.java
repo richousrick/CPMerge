@@ -2,6 +2,7 @@ package parse.parser.java.comp;
 
 import java.security.InvalidParameterException;
 
+import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import dif.ClassNode;
@@ -79,7 +80,39 @@ import parse.parser.java.comp.JavaParser.VariableModifierContext;
  */
 public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 
-	boolean doRecursion;
+	private final boolean doRecursion;
+	private boolean doVariableInit = true;
+	private boolean doVariableDec = true;
+
+	/**
+	 * @return the doVariableDec
+	 */
+	public boolean isDoVariableDec() {
+		return doVariableDec;
+	}
+
+	/**
+	 * @param doVariableDec
+	 *            the doVariableDec to set
+	 */
+	public void setDoVariableDec(boolean doVariableDec) {
+		this.doVariableDec = doVariableDec;
+	}
+
+	/**
+	 * @param doVariableInit
+	 *            the doVariableInit to set
+	 */
+	public void setDoVariableInit(boolean doVariableInit) {
+		this.doVariableInit = doVariableInit;
+	}
+
+	/**
+	 * @return the doVariableInit
+	 */
+	public boolean isDoVariableInit() {
+		return doVariableInit;
+	}
 
 	/**
 	 * Initializes the PrettyPrinter class TODO Annotate constructor
@@ -309,9 +342,19 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 	@Override
 	public String visitVariableDeclarator(VariableDeclaratorContext ctx) {
 		String s = visitVariableDeclaratorId(ctx.variableDeclaratorId());
-		if (ctx.variableInitializer() != null) {
-			s += " = " + visitVariableInitializer(ctx.variableInitializer());
+		if (doVariableInit) {
+			if (ctx.variableInitializer() != null) {
+				s += " = " + visitVariableInitializer(ctx.variableInitializer());
+			}
+		} else {
+			ParserRuleContext parent = ctx.getParent().getParent();
+			if (parent instanceof LocalVariableDeclarationContext) {
+				if (((LocalVariableDeclarationContext) parent).typeType().primitiveType() == null) {
+					s += " = null";
+				}
+			}
 		}
+
 		return s;
 	}
 
@@ -486,12 +529,19 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 	 */
 	@Override
 	public String visitBlock(BlockContext ctx) {
-		String s = "{\n";
+		String s = "";
+		if (doRecursion) {
+			s = "{\n";
 
-		for (BlockStatementContext statement : ctx.blockStatement()) {
-			s += "\t" + visitBlockStatement(statement) + "\n";
+			for (BlockStatementContext statement : ctx.blockStatement()) {
+				s += "\t" + visitBlockStatement(statement) + "\n";
+			}
+			s += "}";
+		} else {
+			for (BlockStatementContext statement : ctx.blockStatement()) {
+				s += visitBlockStatement(statement) + "\n";
+			}
 		}
-		s += "}";
 		return s;
 	}
 
@@ -523,10 +573,12 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 	public String
 	visitLocalVariableDeclaration(LocalVariableDeclarationContext ctx) {
 		String s = "";
-		for (VariableModifierContext vmc : ctx.variableModifier()) {
-			s += visitVariableModifier(vmc) + " ";
+		if (doVariableDec) {
+			for (VariableModifierContext vmc : ctx.variableModifier()) {
+				s += visitVariableModifier(vmc) + " ";
+			}
+			s += visitTypeType(ctx.typeType()) + " ";
 		}
-		s += visitTypeType(ctx.typeType()) + " ";
 		s += visitVariableDeclarators(ctx.variableDeclarators());
 		return s;
 	}
@@ -575,24 +627,34 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 		} else if (ctx.IF() != null) {
 			s = ctx.IF().getText();
 			s+=visitParExpression(ctx.parExpression());
-			s += visitStatement(ctx.statement(0));
+			if (doRecursion) {
+				s += visitStatement(ctx.statement(0));
+			}
 			if (ctx.ELSE() != null) {
 				s+=ctx.ELSE();
-				s += visitStatement(ctx.statement(1));
+				if (doRecursion) {
+					s += visitStatement(ctx.statement(1));
+				}
 			}
 		} else if (ctx.FOR() != null) {
 			s = ctx.FOR().getText() + "(";
 			s += visitForControl(ctx.forControl()) + ")";
-			s += visitStatement(ctx.statement(0));
+			if (doRecursion) {
+				s += visitStatement(ctx.statement(0));
+			}
 		} else if (ctx.DO() != null) {
 			s = ctx.DO().getText();
-			s += visitStatement(ctx.statement(0));
+			if (doRecursion) {
+				s += visitStatement(ctx.statement(0));
+			}
 			s += ctx.WHILE().getText();
 			s += visitParExpression(ctx.parExpression()) + ";";
 		} else if (ctx.WHILE() != null) {
 			s = ctx.WHILE().getText();
 			s += visitParExpression(ctx.parExpression());
-			s += visitStatement(ctx.statement(0));
+			if (doRecursion) {
+				s += visitStatement(ctx.statement(0));
+			}
 		} else if (ctx.TRY() != null) {
 			s = ctx.TRY().getText();
 			if (ctx.resourceSpecification() != null) {
@@ -655,9 +717,12 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 				return "\t" + visitBlock(ctx.blockLabel).replaceAll("\n", "\n\t");
 			else if (ctx.statementExpression != null)
 				return visitExpression(ctx.statementExpression)+";";
-			else if (ctx.IDENTIFIER() != null)
-				return ctx.IDENTIFIER().getText() + ":" + visitStatement(ctx.statement(0));
-			else if (ctx.SEMI() != null)
+			else if (ctx.IDENTIFIER() != null) {
+				s = ctx.IDENTIFIER().getText() + ":";
+				if (doRecursion) {
+					s += visitStatement(ctx.statement(0));
+				}
+			} else if (ctx.SEMI() != null)
 				return ctx.SEMI().getText();
 		}
 		return s;

@@ -25,8 +25,6 @@ public class MergePoint extends IntermdiateAST {
 	/**
 	 * Initializes the MergeGroup.MergePoint class
 	 *
-	 * @param parent
-	 *            node of the merge point
 	 * @param mergeOptions
 	 *            map of possible nodes at the specified position
 	 *
@@ -50,6 +48,22 @@ public class MergePoint extends IntermdiateAST {
 		setParent(insertIndex, parent);
 	}
 
+	/**
+	 * Initializes the MergeGroup.MergePoint class
+	 *
+	 * @param parent
+	 *            node of the merge point
+	 * @param mergeOptions
+	 *            map of possible nodes at the specified position
+	 *
+	 */
+	public MergePoint(HashMap<UniqueSet, ArrayList<ClassNodeSkeleton>> mergeOptions, MergeGroup mergeGroup,
+			ClassNodeSkeleton parent, int insertIndex) {
+		super(mergeGroup);
+		this.mergeOptions = mergeOptions;
+		setParent(insertIndex, parent);
+	}
+
 	/* (non-Javadoc)
 	 * @see java.lang.Object#toString()
 	 */
@@ -67,7 +81,7 @@ public class MergePoint extends IntermdiateAST {
 
 	public void addChild(int pos, ClassNodeSkeleton child) {
 		child.setParent(this);
-		mergeOptions.get(child.uniqueSet).add(pos, child);
+		mergeOptions.get(child.set).add(pos, child);
 	}
 
 	/*
