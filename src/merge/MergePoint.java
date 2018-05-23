@@ -11,14 +11,14 @@ import java.util.Map.Entry;
  *
  * @author Rikkey Paal
  */
-public class MergePoint extends IntermdiateAST {
+public class MergePoint<D> extends IntermdiateAST<D> {
 
-	private final HashMap<UniqueSet, ArrayList<ClassNodeSkeleton>> mergeOptions;
+	private final HashMap<UniqueSet, ArrayList<ClassNodeSkeleton<D>>> mergeOptions;
 
 	/**
 	 * @return the mergeOptions
 	 */
-	public HashMap<UniqueSet, ArrayList<ClassNodeSkeleton>> getMergeOptions() {
+	public HashMap<UniqueSet, ArrayList<ClassNodeSkeleton<D>>> getMergeOptions() {
 		return mergeOptions;
 	}
 
@@ -29,18 +29,18 @@ public class MergePoint extends IntermdiateAST {
 	 *            map of possible nodes at the specified position
 	 *
 	 */
-	public MergePoint(HashMap<UniqueSet, ArrayList<ClassNodeSkeleton>> mergeOptions, MergeGroup mergeGroup) {
+	public MergePoint(HashMap<UniqueSet, ArrayList<ClassNodeSkeleton<D>>> mergeOptions, MergeGroup mergeGroup) {
 		super(mergeGroup);
 		int insertIndex = Integer.MAX_VALUE;
 		this.mergeOptions = mergeOptions;
-		IntermdiateAST parent = mergeOptions.values().iterator().next().get(0).getParent();
+		IntermdiateAST<D> parent = mergeOptions.values().iterator().next().get(0).getParent();
 		// make all options children of this node
-		for (ArrayList<ClassNodeSkeleton> cs : mergeOptions.values()) {
+		for (ArrayList<ClassNodeSkeleton<D>> cs : mergeOptions.values()) {
 			int elementIndex = cs.get(0).getParent().children.indexOf(cs.get(0));
 			if (elementIndex < insertIndex) {
 				insertIndex = elementIndex;
 			}
-			for (ClassNodeSkeleton cns : cs) {
+			for (ClassNodeSkeleton<D> cns : cs) {
 				cns.setParent(this);
 			}
 		}
@@ -57,8 +57,8 @@ public class MergePoint extends IntermdiateAST {
 	 *            map of possible nodes at the specified position
 	 *
 	 */
-	public MergePoint(HashMap<UniqueSet, ArrayList<ClassNodeSkeleton>> mergeOptions, MergeGroup mergeGroup,
-			ClassNodeSkeleton parent, int insertIndex) {
+	public MergePoint(HashMap<UniqueSet, ArrayList<ClassNodeSkeleton<D>>> mergeOptions, MergeGroup mergeGroup,
+			ClassNodeSkeleton<D> parent, int insertIndex) {
 		super(mergeGroup);
 		this.mergeOptions = mergeOptions;
 		setParent(insertIndex, parent);
@@ -70,16 +70,16 @@ public class MergePoint extends IntermdiateAST {
 	@Override
 	public String toString() {
 		String s = "merge";
-		for (Entry<UniqueSet, ArrayList<ClassNodeSkeleton>> option : mergeOptions.entrySet()) {
+		for (Entry<UniqueSet, ArrayList<ClassNodeSkeleton<D>>> option : mergeOptions.entrySet()) {
 			s += "\n\t" + Arrays.toString(option.getKey().setFuncIds.toArray());
-			for (ClassNodeSkeleton cns : option.getValue()) {
+			for (ClassNodeSkeleton<D> cns : option.getValue()) {
 				s += "\n\t" + cns.toString().replaceAll("\n", "\n\t\t");
 			}
 		}
 		return s;
 	}
 
-	public void addChild(int pos, ClassNodeSkeleton child) {
+	public void addChild(int pos, ClassNodeSkeleton<D> child) {
 		child.setParent(this);
 		mergeOptions.get(child.set).add(pos, child);
 	}
@@ -91,9 +91,9 @@ public class MergePoint extends IntermdiateAST {
 	@Override
 	public String simpleCodeRepresentation() {
 		String representation = "";
-		for (Entry<UniqueSet, ArrayList<ClassNodeSkeleton>> option : mergeOptions.entrySet()) {
+		for (Entry<UniqueSet, ArrayList<ClassNodeSkeleton<D>>> option : mergeOptions.entrySet()) {
 			representation += "if( functionId in " + option.getKey().toString() + "){";
-			for (ClassNodeSkeleton struct : option.getValue()) {
+			for (ClassNodeSkeleton<D> struct : option.getValue()) {
 				representation += "\n\t" + struct.simpleCodeRepresentation().replaceAll("\n", "\n\t");
 			}
 			representation += "\n} else ";

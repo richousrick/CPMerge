@@ -7,19 +7,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map.Entry;
 
-import dif.ClassNode;
+import dif.ASTNode;
 import parse.PluginInterface;
 
 /**
  * Handles the merging of multiple nodes in a group of related functions into a single AST representing the merged function
  * @author Rikkey Paal
  */
+@SuppressWarnings("rawtypes")
 public class MergeGroup {
-	private ClassNode sharedTree;
-	// private ArrayList<ArrayList<ClassNode>> mergeCandidates;
 	private final ArrayList<List<int[]>> functionMapping;
-	final ArrayList<ClassNode> functions;
-	private final PluginInterface plugin;
+	final ArrayList<ASTNode<?>> functions;
+	private final PluginInterface<?> plugin;
+	private final int ID;
 
 	/**s
 	 * Initializes the MergeGroup class
@@ -27,36 +27,15 @@ public class MergeGroup {
 	 * @param sharedTree
 	 * @param mergeCandidates
 	 */
-	public MergeGroup(ArrayList<ClassNode> functions, ArrayList<List<int[]>> functionMapping, PluginInterface plugin) {
+	public MergeGroup(ArrayList<ASTNode<?>> functions, ArrayList<List<int[]>> functionMapping,
+			PluginInterface<?> plugin, int ID) {
 		this.functionMapping  =functionMapping;
 		this.functions = functions;
 		this.plugin = plugin;
+		this.ID = ID;
 	}
 
-	public String getMethodHeaders() {
-		String s = "{";
-		for (ClassNode c : functions) {
-			s += c.getIdentifier() + ",";
-		}
-		s = s.substring(0, s.length() - 1);
-		s += "}\n";
-		// if (functions.size() == 2) {
-		// PrettyPrinter p = new PrettyPrinter(true);
-		// ArrayList<ClassNode>[] tmp = getMergeCandidates(functions.get(0),
-		// functions.get(1));
-		// for (ArrayList<ClassNode> ttmp : tmp) {
-		// for (ClassNode ctmp : ttmp) {
-		// s += ctmp.toString() + "\n";
-		// }
-		// }
-		// }
-		// for (List<int[]> i : functionMapping) {
-		// s += Arrays.deepToString(i.toArray());
-		// }
-		return s.replaceAll("\\]\\]\\[\\[", "]]\n\t[[");
-	}
-
-	public ArrayList<ClassNode> getFunctions() {
+	public ArrayList<ASTNode<?>> getFunctions() {
 		return functions;
 	}
 
@@ -80,21 +59,19 @@ public class MergeGroup {
 	//
 	// }
 
-
-
-	private List<int[]> getRelationship(int f1Pos, int f2Pos){
-		if(f1Pos==f2Pos)
+	private List<int[]> getRelationship(int f1Pos, int f2Pos) {
+		if (f1Pos == f2Pos)
 			throw new IllegalArgumentException("Cannot reference mapping to self");
 		int pos = 0;
 		int len = functions.size();
-		if(f1Pos>f2Pos) {
-			for(int i = 0 ; i<f2Pos; i++) {
-				pos+=len;
+		if (f1Pos > f2Pos) {
+			for (int i = 0; i < f2Pos; i++) {
+				pos += len;
 				len--;
 			}
-		}else {
-			for(int i = 0 ; i<f1Pos; i++) {
-				pos+=len;
+		} else {
+			for (int i = 0; i < f1Pos; i++) {
+				pos += len;
 				len--;
 			}
 		}
@@ -102,36 +79,10 @@ public class MergeGroup {
 	}
 
 	public String printSharedCode() {
-		String s = "\t\tCode Content\n";
-		for(ClassNode function:functions){
-			s+=function.print("\t\t\t", true, true)+"\n";
-		}
-		s+="\t\tMappings\n";
-		for(List<int[]> mapping:functionMapping){
-			s+="\t\t\t"+Arrays.deepToString(mapping.toArray())+"\n";
-		}
-		s += "\t\tSets\n";
-		// HashMap<List<Integer>, UniqueSet> uniqueSets =
-		// getMinimalUniqueSets();
-		// for (List<Integer> li : uniqueSets.keySet()) {
-		// System.out.println("\t\t\t" + Arrays.toString(li.toArray()));
-		// }
-
-		//		HashMap<int[], Mapping[]> code = getSharedCode();
-		//		for (Entry<int[], Mapping[]> entry : code.entrySet()) {
-		//			s += "\tU(";
-		//			for(int k:entry.getKey()){
-		//				s+=k+"["+functions.get(k).getIdentifier()+"],";
-		//			}
-		//			s = s.substring(0,s.length()-1)+")\n";
-		//			for (Mapping map : entry.getValue()) {
-		//				s += map.getIdentifier()+"\n";
-		//			}
-		//		}
 		return "";// s;
 	}
 
-	public ClassNodeSkeleton buildMergeFunction() {
+	public MergedFunction buildMergeFunction() {
 		HashMap<List<Integer>, UniqueSet> uniqueSets = getMinimalUniqueSets();
 		ClassNodeSkeleton root = null;
 		ArrayList<Integer> sharedId = new ArrayList<>();
@@ -197,7 +148,7 @@ public class MergeGroup {
 		}
 
 		root.setUniqueSetR(complete);
-		return root;
+		return new MergedFunction(functions, root, ID);
 	}
 
 	/**
@@ -570,7 +521,7 @@ public class MergeGroup {
 	 * @author Rikkey Paal
 	 */
 	class MultiMapping {
-		ClassNode c;
+		ASTNode<?> c;
 		ArrayList<Mapping> mappingList = new ArrayList<>();
 		/**
 		 * mappings.get(x).get(y) returns mapping for node of function x post
@@ -682,7 +633,6 @@ public class MergeGroup {
 		 */
 		public HashMap<List<Integer>, ArrayList<Mapping>> getUniqueSets() {
 			HashMap<List<Integer>, ArrayList<Mapping>> sets = new HashMap<>();
-			ArrayList<Mapping> validMappings = new ArrayList<>();
 			for(Mapping m: mappingList) {
 				// get sets funcions
 				List<Integer> funcIds = m.getSet();
@@ -702,12 +652,16 @@ public class MergeGroup {
 		 * This is used as the start of the AST of the merged function
 		 */
 		public void buildMappingSkeliton() {
+			// mapping of <fID1, <nodePos, Mapping>>
 			HashMap<Integer, HashMap<Integer, Mapping>> mappingMap = new HashMap<>();
 			ArrayList<Mapping> mappings = new ArrayList<>();
 			// generate skelitonNodes storing them by thier first position in
 			// the mapping
 			for (Mapping m : mappingList) {
+				// Create the classNodeSkeleton
 				m.buildNode();
+				// for each fID fill mappingMap with map of fID, <nodePos,
+				// Mapping between two>
 				for(Entry<Integer, Integer> mapping: m.getMappings().entrySet()){
 					if (!mappingMap.containsKey(mapping.getKey())) {
 						mappingMap.put(mapping.getKey(), new HashMap<>());
@@ -736,12 +690,13 @@ public class MergeGroup {
 	 *
 	 * @author Rikkey Paal
 	 */
+
 	class Mapping {
 
 		/**
 		 * <a,b> refers to node b in function a
 		 */
-		private final HashMap<Integer, Integer> mappings = new HashMap();
+		private final HashMap<Integer, Integer> mappings = new HashMap<Integer, Integer>();
 
 		/**
 		 * Used in {@link MergeGroup#getMinimalUniqueSets()}
@@ -812,15 +767,16 @@ public class MergeGroup {
 		 * Generates a {@link ClassNodeSkeleton} to be stored in this class
 		 * @return
 		 */
+		@SuppressWarnings("unchecked")
 		public void buildNode() {
 			int pos = Collections.min(mappings.keySet());
-			ClassNode n = functions.get(pos);
-			ClassNode mappingNode = n.getPostOrderDecendant(mappings.get(pos));
+			ASTNode<?> n = functions.get(pos);
+			ASTNode<?> mappingNode = n.getPostOrderDecendant(mappings.get(pos));
 			if (mappingNode.getChildren().size() > 0) {
-				node = new ClassNodeSkeleton(new ClassNode(mappingNode, 0), this, MergeGroup.this,
-						new ClassNode(mappingNode.getChildrenAsCN().get(0)));
+				node = new ClassNodeSkeleton(plugin.copyNode(mappingNode, false), this, MergeGroup.this,
+						plugin.copyNode(mappingNode.getChildrenAsASTNode().get(0), true));
 			} else {
-				node = new ClassNodeSkeleton(new ClassNode(mappingNode, 0), this, MergeGroup.this, null);
+				node = new ClassNodeSkeleton(plugin.copyNode(mappingNode, false), this, MergeGroup.this, null);
 			}
 		}
 
@@ -855,10 +811,10 @@ public class MergeGroup {
 			if (parentPos == null) {
 				parentPos = new ArrayList<>();
 				int[] parentI = new int[2];
-				int pos = Collections.min(mappings.keySet());
-				Integer pos2 = mappings.get(pos);
-				parentI[0] = pos;
-				parentI[1] = functions.get(pos).getPostOrderDecendant(pos2).getParent()
+				int fIDPos = Collections.min(mappings.keySet());
+				Integer pos2 = mappings.get(fIDPos);
+				parentI[0] = fIDPos;
+				parentI[1] = functions.get(fIDPos).getPostOrderDecendant(pos2).getParent()
 						.getPostOrderPos();
 				parentPos.add(parentI);
 			}

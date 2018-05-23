@@ -5,18 +5,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
-import dif.ClassNode;
+import dif.ASTNode;
+import jdk.internal.org.objectweb.asm.tree.ClassNode;
 
-class FunctionMappings{
+public class FunctionMappings<D> {
 	private final ArrayList<FunctionMapping> mappings;
 
 	/**
 	 * Initializes the FunctionMappings class
 	 * TODO Annotate constructor
 	 */
-	public FunctionMappings(ArrayList<ClassNode> functions) {
+	public FunctionMappings(ArrayList<? extends ASTNode<D>> functions) {
 		mappings = new ArrayList<>(functions.size());
-		for (ClassNode function : functions) {
+		for (ASTNode<D> function : functions) {
 			mappings.add(new FunctionMapping(function));
 		}
 	}
@@ -94,7 +95,7 @@ class FunctionMappings{
 	 *            id of the specified function
 	 * @return the {@link ClassNode} associated with the specified function
 	 */
-	public ClassNode getFunctionNode(int f1) {
+	public ASTNode<D> getFunctionNode(int f1) {
 		return getFunctionMapping(f1).getNode();
 	}
 
@@ -102,8 +103,8 @@ class FunctionMappings{
 		return mappings.get(f1);
 	}
 
-	public ArrayList<ClassNode> getClasses() {
-		ArrayList<ClassNode> nodes = new ArrayList<>();
+	public ArrayList<ASTNode<D>> getClasses() {
+		ArrayList<ASTNode<D>> nodes = new ArrayList<>();
 		for (FunctionMapping fm : mappings) {
 			nodes.add(fm.getNode());
 		}
@@ -150,18 +151,31 @@ class FunctionMappings{
 		return str.substring(0,str.length()-1)+")";
 	}
 
+	public void removeMappings(int fID, ArrayList<Integer> funcsToKeep) {
+		FunctionMapping func = mappings.get(fID);
+		Set<Integer> adjacent = func.getAdjacent();
+		Integer[] adjacentArray = adjacent.toArray(new Integer[adjacent.size()]);
+
+		for (int i = adjacent.size() - 1; i >= 0; i--) {
+			if (!funcsToKeep.contains(adjacentArray[i])) {
+				mappings.get(adjacentArray[i]).relationships.remove(fID);
+			}
+		}
+	}
+
 	class FunctionMapping {
 		/** Adjacency list with mapping vector */
 		private final HashMap<Integer, List<int[]>> relationships;
 		// ensure mapping
 		// order stays consistant
-		private final ClassNode node;
+		private final ASTNode<D> node;
+
 
 		/**
 		 * Initializes the MergeThread.FunctionMappings class TODO Annotate
 		 * constructor
 		 */
-		public FunctionMapping(ClassNode node) {
+		public FunctionMapping(ASTNode<D> node) {
 			relationships = new HashMap<>();
 			this.node = node;
 		}
@@ -176,13 +190,6 @@ class FunctionMappings{
 		 */
 		private void addRelation(int functionID, List<int[]> mapping) {
 			relationships.put(functionID, mapping);
-		}
-
-		/**
-		 * @return all relations
-		 */
-		private HashMap<Integer, List<int[]>> getRelations() {
-			return relationships;
 		}
 
 		/**
@@ -205,8 +212,10 @@ class FunctionMappings{
 			return relationships.get(f1);
 		}
 
-		private ClassNode getNode() {
+		private ASTNode<D> getNode() {
 			return node;
 		}
+
 	}
+
 }

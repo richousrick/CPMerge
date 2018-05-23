@@ -1,10 +1,9 @@
-package parse.parser.java.comp;
+package parse.parser.java.visitors;
 
 import java.util.ArrayList;
 
 import org.antlr.v4.runtime.tree.TerminalNode;
 
-import dif.ClassNode;
 import parse.parser.java.comp.JavaParser.ArgumentsContext;
 import parse.parser.java.comp.JavaParser.ArrayCreatorRestContext;
 import parse.parser.java.comp.JavaParser.ArrayInitializerContext;
@@ -22,7 +21,6 @@ import parse.parser.java.comp.JavaParser.CompilationUnitContext;
 import parse.parser.java.comp.JavaParser.CreatedNameContext;
 import parse.parser.java.comp.JavaParser.CreatorContext;
 import parse.parser.java.comp.JavaParser.EnhancedForControlContext;
-import parse.parser.java.comp.JavaParser.ExplicitGenericInvocationContext;
 import parse.parser.java.comp.JavaParser.ExplicitGenericInvocationSuffixContext;
 import parse.parser.java.comp.JavaParser.ExpressionContext;
 import parse.parser.java.comp.JavaParser.ExpressionListContext;
@@ -69,6 +67,8 @@ import parse.parser.java.comp.JavaParser.VariableDeclaratorIdContext;
 import parse.parser.java.comp.JavaParser.VariableDeclaratorsContext;
 import parse.parser.java.comp.JavaParser.VariableInitializerContext;
 import parse.parser.java.comp.JavaParser.VariableModifierContext;
+import parse.parser.java.comp.JavaParserBaseVisitor;
+import parse.parser.java.misc.merge.ClassNode;
 
 /**
  * TODO Annotate class
@@ -111,7 +111,24 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 		for (ClassNode c : classes) {
 			root.addChild(c);
 		}
+		removeTmp(root);
+		root.compressClass();
 		return root;
+	}
+
+	private void removeTmp(ClassNode c) {
+		for (ClassNode child : c.getChildrenAsASTNode()) {
+			removeTmp(child);
+		}
+
+		if (c.getType() == 3) {
+			if (c.getNodeData() instanceof CompilationUnitContext) {
+				c.setType(0);
+			} else {
+				c.setType(2);
+			}
+		}
+
 	}
 
 	class ConvertReturns {
@@ -131,38 +148,38 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 
 	/**
 	 * Converts the AST to contain only Statements
-	 * 
+	 *
 	 * @param classNode
 	 *            root of the AST to convert
 	 * @return an AST containing only Statements
 	 */
-	private ConvertReturns convert(ClassNode classNode) {
-		String current = "";
-		ArrayList<ClassNode> children = new ArrayList<>();
-		for (ClassNode child : classNode.getChildrenAsCN()) {
-			ConvertReturns ret = convert(child);
-			if (ret.current.trim().length() > 0) {
-				current += ret.current.trim() + " ";
-			}
-			if (ret.node != null) {
-				children.add(ret.node);
-			}
-		}
-		ClassNode retClassNode = null;
-		if (classNode.getType() == 3) {
-			if (current.length() == 0) {
-				current = classNode.getIdentifier();
-			}
-			retClassNode = new ClassNode(classNode.getNodeData(), current);
-			for (ClassNode c : children) {
-				retClassNode.addChild(c);
-			}
-			current = "";
-		} else {
-			current = classNode.getIdentifier() + " " + current;
-		}
-		return new ConvertReturns(retClassNode, current);
-	}
+	// private ConvertReturns convert(ClassNode classNode) {
+	// String current = "";
+	// ArrayList<ClassNode> children = new ArrayList<>();
+	// for (ClassNode child : classNode.getChildrenAsASTNode()) {
+	// ConvertReturns ret = convert(child);
+	// if (ret.current.trim().length() > 0) {
+	// current += ret.current.trim() + " ";
+	// }
+	// if (ret.node != null) {
+	// children.add(ret.node);
+	// }
+	// }
+	// ClassNode retClassNode = null;
+	// if (classNode.getType() == 3) {
+	// if (current.length() == 0) {
+	// current = classNode.getIdentifier();
+	// }
+	// retClassNode = new ClassNode(classNode.getNodeData(), current);
+	// for (ClassNode c : children) {
+	// retClassNode.addChild(c);
+	// }
+	// current = "";
+	// } else {
+	// current = classNode.getIdentifier() + " " + current;
+	// }
+	// return new ConvertReturns(retClassNode, current);
+	// }
 
 	/*
 	 * (non-Javadoc)
@@ -194,7 +211,7 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 			}
 		}
 		classes.add(n);
-		return new ClassNode(ctx, "ClassDeclaration " + ctx.IDENTIFIER().getText());
+		return null;
 	}
 
 	/*
@@ -205,8 +222,21 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 	 */
 	@Override
 	public ClassNode visitClassBodyDeclaration(ClassBodyDeclarationContext ctx) {
-		if (ctx.memberDeclaration() != null)
+		if (ctx.memberDeclaration() != null){
+			// check it is not overwritten
+			for(ModifierContext mctx: ctx.modifier()){
+				if(mctx.classOrInterfaceModifier()!=null){
+					if(mctx.classOrInterfaceModifier().annotation()!=null){
+						if(mctx.classOrInterfaceModifier().annotation().qualifiedName()!= null){
+							if (mctx.classOrInterfaceModifier().annotation().qualifiedName().IDENTIFIER(0).getText()
+									.equals("Override"))
+								return null;
+						}
+					}
+				}
+			}
 			return visitMemberDeclaration(ctx.memberDeclaration());
+		}
 		return null;
 	}
 
@@ -245,7 +275,7 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 			}
 			ClassNode methodNode = new ClassNode(ctx, ctx.IDENTIFIER().toString(),
 					mustMatch);
-			for (ClassNode n : visitBlock(ctx.methodBody().block()).getChildrenAsCN()) {
+			for (ClassNode n : visitBlock(ctx.methodBody().block()).getChildrenAsASTNode()) {
 				methodNode.addChild(n);
 			}
 			return methodNode;
@@ -279,8 +309,8 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 		for (VariableDeclaratorContext v : ctx.variableDeclarator()) {
 			c.addChild(visitVariableDeclarator(v));
 		}
-		if (c.getChildrenAsCN().size() == 1)
-			return c.getChildrenAsCN().get(0);
+		if (c.getChildrenAsASTNode().size() == 1)
+			return c.getChildrenAsASTNode().get(0);
 		else
 			return c;
 	}
@@ -554,7 +584,7 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 		if (ctx.localVariableDeclaration() != null) {
 			c.addChild(visitLocalVariableDeclaration(ctx.localVariableDeclaration()));
 		}
-		return convert(c).node;
+		return c;
 	}
 
 	/*
@@ -621,13 +651,13 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 			c.addChild(ctx.IF());
 			c.addChild(visitParExpression(ctx.parExpression()));
 			ClassNode then = visitStatement(ctx.statement(0));
-			ClassNode firstChild = then.getChildrenAsCN().get(0);
+			ClassNode firstChild = then.getChildrenAsASTNode().get(0);
 			firstChild.setIdentifier("then." + firstChild.getIdentifier());
 			c.addChild(then);
 			if (ctx.ELSE() != null) {
 				c.addChild(ctx.ELSE());
 				ClassNode elseS= visitStatement(ctx.statement(1));
-				firstChild = elseS.getChildrenAsCN().get(0);
+				firstChild = elseS.getChildrenAsASTNode().get(0);
 				firstChild.setIdentifier("else." + firstChild.getIdentifier());
 				c.addChild(elseS);
 			}
@@ -967,17 +997,11 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 				c.addChild(ctx.IDENTIFIER());
 			} else if (ctx.THIS() != null) {
 				c.addChild(ctx.THIS());
-			} else if (ctx.NEW() != null) {
-				c.addChild(ctx.NEW());
-				if (ctx.nonWildcardTypeArguments() != null) {
-					c.addChild(visitNonWildcardTypeArguments(ctx.nonWildcardTypeArguments()));
-				}
-				c.addChild(visitInnerCreator(ctx.innerCreator()));
 			} else if (ctx.SUPER() != null) {
 				c.addChild(ctx.SUPER());
 				c.addChild(visitSuperSuffix(ctx.superSuffix()));
 			} else {
-				c.addChild(visitExplicitGenericInvocation(ctx.explicitGenericInvocation()));
+				// c.addChild(visitExplicitGenericInvocation(ctx.explicitGenericInvocation()));
 			}
 		} else {
 			for (int i = 0; i < ctx.getChildCount(); i++) {
@@ -987,8 +1011,6 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 					c.addChild((TerminalNode) ctx.getChild(i));
 				} else if (ctx.getChild(i) instanceof ExpressionListContext) {
 					c.addChild(visitExpressionList((ExpressionListContext) ctx.getChild(i)));
-				} else if (ctx.getChild(i) instanceof CreatorContext) {
-					c.addChild(visitCreator((CreatorContext) ctx.getChild(i)));
 				} else if (ctx.getChild(i) instanceof TypeTypeContext) {
 					c.addChild(visitTypeType((TypeTypeContext) ctx.getChild(i)));
 				} else if (ctx.getChild(i) instanceof LambdaExpressionContext) {
@@ -1114,20 +1136,21 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 	 */
 	@Override
 	public ClassNode visitCreator(CreatorContext ctx) {
-		ClassNode c = new ClassNode(ctx, "Creator");
-		if (ctx.nonWildcardTypeArguments() != null) {
-			c.addChild(visitNonWildcardTypeArguments(ctx.nonWildcardTypeArguments()));
-			c.addChild(visitCreatedName(ctx.createdName()));
-			c.addChild(visitClassCreatorRest(ctx.classCreatorRest()));
-		} else {
-			c.addChild(visitCreatedName(ctx.createdName()));
-			if (ctx.classCreatorRest() != null) {
-				c.addChild(visitClassCreatorRest(ctx.classCreatorRest()));
-			} else {
-				c.addChild(visitArrayCreatorRest(ctx.arrayCreatorRest()));
-			}
-		}
-		return c;
+		return null;
+		// ClassNode c = new ClassNode(ctx, "Creator");
+		// if (ctx.nonWildcardTypeArguments() != null) {
+		// c.addChild(visitNonWildcardTypeArguments(ctx.nonWildcardTypeArguments()));
+		// c.addChild(visitCreatedName(ctx.createdName()));
+		// c.addChild(visitClassCreatorRest(ctx.classCreatorRest()));
+		// } else {
+		// c.addChild(visitCreatedName(ctx.createdName()));
+		// if (ctx.classCreatorRest() != null) {
+		// c.addChild(visitClassCreatorRest(ctx.classCreatorRest()));
+		// } else {
+		// c.addChild(visitArrayCreatorRest(ctx.arrayCreatorRest()));
+		// }
+		// }
+		// return c;
 	}
 
 	/*
@@ -1198,12 +1221,7 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 	 */
 	@Override
 	public ClassNode visitClassCreatorRest(ClassCreatorRestContext ctx) {
-		ClassNode c = new ClassNode(ctx, "ClassCreatorRest");
-		c.addChild(visitArguments(ctx.arguments()));
-		if (ctx.classBody() != null) {
-			c.addChild(visitClassBody(ctx.classBody()));
-		}
-		return c;
+		return null;
 	}
 
 	/*
@@ -1212,13 +1230,14 @@ public class ASTExtractor extends JavaParserBaseVisitor<ClassNode> {
 	 * visitExplicitGenericInvocation(parse.parser.java.comp.JavaParser.
 	 * ExplicitGenericInvocationContext)
 	 */
-	@Override
-	public ClassNode visitExplicitGenericInvocation(ExplicitGenericInvocationContext ctx) {
-		ClassNode c = new ClassNode(ctx, "ExplicitGenericInvocation");
-		c.addChild(visitNonWildcardTypeArguments(ctx.nonWildcardTypeArguments()));
-		c.addChild(visitExplicitGenericInvocationSuffix(ctx.explicitGenericInvocationSuffix()));
-		return c;
-	}
+	// @Override
+	// public ClassNode
+	// visitExplicitGenericInvocation(ExplicitGenericInvocationContext ctx) {
+	// ClassNode c = new ClassNode(ctx, "ExplicitGenericInvocation");
+	// c.addChild(visitNonWildcardTypeArguments(ctx.nonWildcardTypeArguments()));
+	// c.addChild(visitExplicitGenericInvocationSuffix(ctx.explicitGenericInvocationSuffix()));
+	// return c;
+	// }
 
 	/*
 	 * (non-Javadoc)

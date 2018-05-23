@@ -4,49 +4,60 @@
 package merge;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.security.InvalidParameterException;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
 import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.ParserRuleContext;
 
-import dif.APTEDCostModel;
-import dif.ClassNode;
+import costmodel.CostModel;
+import dif.ASTNode;
 import distance.APTED;
 import parse.PluginInterface;
 import ref.Helper;
+import ref.Language;
 
 /**
  * @author Rikkey Paal
  *
  */
-public class MergeThread implements Runnable {
+public class MergeThread<D> implements Runnable {
 
 
-	private final PluginInterface plugin;
+	private final PluginInterface<D> plugin;
 	private final File f;
-	private String ThreadName;
-	private final int minMatch;
 	private final double minPer;
-	private final double minPerDelta;
-	private APTED<APTEDCostModel, ParserRuleContext> apted;
+	private final Language<D> lang;
+	private APTED<? extends CostModel<D>, D> apted;
 	private int totalComparisons = 0;
 	private int comparisonsDone = 0;
+	private ArrayList<? extends ASTNode<D>> classMethods;
 
 	private double perShown = 0;
 
-	String testPrintEnd = "";
+	private String currFileRep = null;
 	/**
 	 *
 	 */
-	public MergeThread(File f, PluginInterface pluginInterface, int minMatch, double minPer, double minPerDelta) {
+	public MergeThread(File f, PluginInterface<D> pluginInterface, double minPer,
+			Language<D> lang) {
 		plugin = pluginInterface;
-		this.minMatch = minMatch;
+		pluginInterface.setMergeThread(this);
 		this.minPer = minPer;
-		this.minPerDelta = minPerDelta;
+		this.lang = lang;
 		this.f = f;
+		try {
+			currFileRep = new String(Files.readAllBytes(f.toPath()));
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
 	}
 
 	/*
@@ -56,7 +67,7 @@ public class MergeThread implements Runnable {
 	@Override
 	public void run() {
 		// Read methods from the file
-		ArrayList<ClassNode> classMethods;
+
 		try {
 			classMethods = parseFile();
 		} catch (IOException e) {
@@ -66,9 +77,9 @@ public class MergeThread implements Runnable {
 
 		// Print the class names and methods
 		if (Helper.test) {
-			for (ClassNode functions : classMethods) {
+			for (ASTNode<?> functions : classMethods) {
 				String functionsString = "";
-				for (ClassNode n : functions.getChildrenAsCN()) {
+				for (ASTNode<?> n : functions.getChildrenAsASTNode()) {
 					functionsString += n.getIdentifier() + ",";
 				}
 				if(functionsString.length()>1){
@@ -81,21 +92,30 @@ public class MergeThread implements Runnable {
 
 
 		Helper.printToSTD("Building costModel", f.getName());
-		apted = new APTED<APTEDCostModel, ParserRuleContext>(new APTEDCostModel());
+		apted = plugin.getApted();
 
 		Helper.printToSTD("Methods Extracted, Searching for matches", f.getName());
 		// Count number of comparisons to be done - used to estimate percentage
 		// complete
-		for (ClassNode classNode : classMethods) {
-			int size = classNode.getChildrenAsCN().size();
+		for (ASTNode<D> classNode : classMethods) {
+			int size = classNode.getChildrenAsASTNode().size();
 			totalComparisons += size * (size - 1) / 2;
 		}
+
 		// process each class sequentially
-		System.out.println(totalComparisons);
-		for (ClassNode classNode : classMethods) {
+		for (ASTNode<D> classNode : classMethods) {
 			processClass(classNode);
 		}
-		System.out.println(testPrintEnd);
+
+		currFileRep = plugin.postProcessFile(currFileRep);
+
+		try {
+			Helper.addSourceFIle(f.getPath(), currFileRep);
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 	}
 
 	/**
@@ -106,7 +126,7 @@ public class MergeThread implements Runnable {
 	 * @return the classes in the file
 	 * @throws IOException
 	 */
-	private ArrayList<ClassNode> parseFile() throws IOException {
+	private ArrayList<? extends ASTNode<D>> parseFile() throws IOException {
 		Helper.printToSTD("Reading file", f.getName());
 		CharStream contents;
 		contents = Helper.readFile(f);
@@ -126,34 +146,40 @@ public class MergeThread implements Runnable {
 	 * @param classNode
 	 *            containing the class to be processed
 	 */
-	private void processClass(ClassNode classNode) {
-		testPrintEnd += classNode.getIdentifier() + "\n";
+	private void processClass(ASTNode<D> classNode) {
+
 		// Generate a list of mappings between similar methods
-		ArrayList<ClassNode> functions = classNode.getChildrenAsCN();
+		ArrayList<? extends ASTNode<D>> functions = classNode.getChildrenAsASTNode();
 		if (Helper.verbose) {
 			Helper.printToSTD("Comparing functions from " + classNode.getIdentifier(), "\n" + f.getName());
 		}
 
-		FunctionMappings comps = compareAllMethods(functions);
-		testPrintEnd += "\tMatches: " + comps.toString() + "\n";
+		FunctionMappings<D> comps = compareAllMethods(functions);
 
 		// group mappings
 		ArrayList<MergeGroup> mergeGroups = generateMergeGroups(comps, functions);
-		testPrintEnd += "\tGroups:\n";
 		for (MergeGroup mg : mergeGroups) {
-			testPrintEnd += "\t\t" + mg.getMethodHeaders() + "\n";
-			testPrintEnd += "\t" + mg.printSharedCode().replaceAll("\n", "\n\t") + "\n";
 
-			System.out.println(mg.getMethodHeaders());
-			ClassNodeSkeleton root = mg.buildMergeFunction();
-			System.out.println(plugin.prettyPrint(root));
+			@SuppressWarnings("unchecked")
+			MergedFunction<D> root = mg.buildMergeFunction();
 
 			// add code to files
+			currFileRep = plugin.insertFunction(root, currFileRep);
 			// log method name changes
 
-		}
-		testPrintEnd += "\t";
+			try {
+				Helper.addUpdatedFunction(root);
+			} catch (IllegalAccessException e) {
+				e.printStackTrace();
+			}
 
+			if (Helper.deleteOldFunctions) {
+				currFileRep = plugin.removeFunctions(root, currFileRep);
+			} else {
+				currFileRep = plugin.updateFunctionBodies(root, currFileRep);
+			}
+
+		}
 
 
 
@@ -167,8 +193,8 @@ public class MergeThread implements Runnable {
 	 *            A list of the functions to compare
 	 * @return mapping of the pairs of methods that are sufficiently similar
 	 */
-	private FunctionMappings compareAllMethods(ArrayList<ClassNode> functions) {
-		FunctionMappings mappings = new FunctionMappings(functions);
+	private FunctionMappings<D> compareAllMethods(ArrayList<? extends ASTNode<D>> functions) {
+		FunctionMappings<D> mappings = new FunctionMappings<D>(functions);
 		// Iterate over every pair of functions in the class
 		for (int i = 0; i < functions.size() - 1; i++) {
 			for (int j = i + 1; j < functions.size(); j++) {
@@ -209,17 +235,18 @@ public class MergeThread implements Runnable {
 	 * @return the difference mapping between the two nodes, Or null if they are
 	 *         too different.
 	 */
-	private List<int[]> compareMethods(ClassNode function1, ClassNode function2, boolean forceComputeMapping) {
+	private List<int[]> compareMethods(ASTNode<D> function1, ASTNode<D> function2, boolean forceComputeMapping) {
 		// check required characteristics match
-		if (!function1.compareMustMatch(function2))
+		if (!function1.compareCharactersitics(function2))
 			return null;
 		int s1 = function1.getSize();
 		int s2 = function2.getSize();
 
 		// If one function is too large for minPer to be reached don't compute
-		if (s1 < s2 * minPer || s2 < s1 * minPer)
+		if (s1 < s2 * minPer || s2 < s1 * minPer) {
+			System.out.println(s1 + "<" + s2 * minPer + " or " + s2 + "<" + s1 * minPer);
 			return null;
-
+		}
 		// Get the distance of the smaller function to the larger function
 		float editDistance;
 		if (s1 > s2) {
@@ -250,7 +277,7 @@ public class MergeThread implements Runnable {
 	}
 
 	private LinkedList<int[]> flipList(List<int[]> list){
-		LinkedList<int[]> retList = new LinkedList();
+		LinkedList<int[]> retList = new LinkedList<int[]>();
 		for(int[] i :list){
 			int[] li = new int[2];
 			li[0] = i[1];
@@ -273,43 +300,79 @@ public class MergeThread implements Runnable {
 	 *            mapping between method at pos x and method at pos y in
 	 *            function methods
 	 * @param functions
+	 * @param functions
 	 *            parsed functions that have their relationship mapped in comps.
 	 * @return
 	 */
-	private ArrayList<MergeGroup> generateMergeGroups(FunctionMappings mappings,
-			ArrayList<ClassNode> functions) {
+	private ArrayList<MergeGroup> generateMergeGroups(FunctionMappings<D> mappings,
+			ArrayList<? extends ASTNode<D>> functions) {
 
 		ArrayList<MergeGroup> mergeGroups = new ArrayList<>();
 		ArrayList<ArrayList<Integer>> groups = mappings.groupFunctions();
-
-		for (ArrayList<Integer> gi : groups) {
-			mergeGroups.add(buildMergeGroup(gi, mappings));
+		groups = plugin.validateMergeGroup(groups, mappings, functions);
+		for (int i = 0; i < groups.size(); i++) {
+			mergeGroups.add(buildMergeGroup(groups.get(i), mappings, i));
 		}
 		return mergeGroups;
 	}
 
-	private MergeGroup buildMergeGroup(ArrayList<Integer> groupPos, FunctionMappings mappings) {
+	private MergeGroup buildMergeGroup(ArrayList<Integer> groupPos, FunctionMappings<D> mappings, int pos) {
 		ArrayList<List<int[]>> relations = new ArrayList<>();
 		for (int j = 0; j < groupPos.size(); j++) {
 			for (int k = j + 1; k < groupPos.size(); k++) {
+				// Try to get mapping if already calculated
 				List<int[]> mapping = mappings.getMapping(groupPos.get(j), groupPos.get(k));
+				// if mapping has not already been calculate, calculate it
 				if (mapping == null) {
-					mapping = compareMethods(mappings.getFunctionNode(j), mappings.getFunctionNode(k), true);
-					mappings.addRelations(j, k, mapping);
+					mapping = compareMethods(mappings.getFunctionNode(groupPos.get(j)),
+							mappings.getFunctionNode(groupPos.get(k)), true);
+					mappings.addRelations(groupPos.get(j), groupPos.get(k), mapping);
 				}
-				relations.add(mapping);
+				if (mapping != null) {
+					relations.add(mapping);
+				} else
+					throw new InvalidParameterException("trying to merge methods that are not similar");
 			}
 		}
-		ArrayList<ClassNode> classes = new ArrayList<>();
+		ArrayList<ASTNode<?>> classes = new ArrayList<>();
 		for (int i : groupPos) {
 			classes.add(mappings.getFunctionNode(i));
 		}
 
-		return new MergeGroup(classes, relations, plugin);
+		return new MergeGroup(classes, relations, plugin, pos);
 	}
 
-	private void writeMergedFunction(String function) {
-
+	public void updateReferences() {
+		currFileRep = plugin.updateReferences(currFileRep, lang.getUpdatedFunctions());
+		try {
+			Helper.addSourceFIle(f.getPath(), currFileRep);
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		}
 	}
 
+	public void initUpdateReferences() {
+		currFileRep = plugin.initUpdateReferences(currFileRep, lang.getUpdatedFunctions());
+		try {
+			Helper.addSourceFIle(f.getPath(), currFileRep);
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		}
+	}
+
+	/**
+	 * TODO Annotate method
+	 */
+	public void postUpdateReferences() {
+		currFileRep = plugin.destroyUpdateReferences(currFileRep, lang.getUpdatedFunctions());
+		try {
+			Helper.addSourceFIle(f.getPath(), currFileRep);
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		}
+	}
+
+	public File getFile() {
+		return f;
+	}
 }

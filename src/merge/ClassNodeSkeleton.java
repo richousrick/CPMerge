@@ -1,8 +1,6 @@
 package merge;
 
-import java.util.Collections;
-
-import dif.ClassNode;
+import dif.ASTNode;
 import merge.MergeGroup.Mapping;
 
 /**
@@ -10,14 +8,14 @@ import merge.MergeGroup.Mapping;
  *
  * @author Rikkey Paal
  */
-public class ClassNodeSkeleton extends IntermdiateAST {
-	private ClassNode node;
+public class ClassNodeSkeleton<D> extends IntermdiateAST<D> {
+	private ASTNode<D> node;
 
 	/**
 	 * @param node
 	 *            the node to set
 	 */
-	public void setNode(ClassNode node) {
+	public void setNode(ASTNode<D> node) {
 		this.node = node;
 	}
 
@@ -29,12 +27,12 @@ public class ClassNodeSkeleton extends IntermdiateAST {
 	 * This may be useful in identifying what part of the plug-in representation
 	 * of the data the node resides
 	 */
-	final ClassNode firstChild;
+	final ASTNode<D> firstChild;
 
 	/**
 	 * @return the firstChild
 	 */
-	public ClassNode getFirstChild() {
+	public ASTNode<?> getFirstChild() {
 		return firstChild;
 	}
 
@@ -49,7 +47,7 @@ public class ClassNodeSkeleton extends IntermdiateAST {
 	 * Initializes the MergeGroup.ClassNodeSkeleton class
 	 * TODO Annotate constructor
 	 */
-	public ClassNodeSkeleton(ClassNode node, Mapping mapping, MergeGroup mergeGroup, ClassNode firstChild) {
+	public ClassNodeSkeleton(ASTNode<D> node, Mapping mapping, MergeGroup mergeGroup, ASTNode<D> firstChild) {
 		super(mergeGroup);
 		this.node = node;
 		this.mapping = mapping;
@@ -58,81 +56,75 @@ public class ClassNodeSkeleton extends IntermdiateAST {
 
 
 
-/**
- * Uses the relative positioning across all occurrences of the nodes to
- * reorder the children.
- * TODO check if works
- * TODO rewrite so Nodes follow following rules
- * 		Node N(c1,c2,...cn)
- * 			each child cn must appear after all nodes that appear before it in its function
- */
-public void orderChildren() {
-	//			children.sort(new Comparator<IntermdiateAST>() {
-	//				@Override
-	//				public int compare(IntermdiateAST c1, IntermdiateAST c2) {
-	//					ClassNodeSkeleton cs1 = null, cs2 = null;
-	//					if (c1 instanceof ClassNodeSkeleton) {
-	//						cs1 = (ClassNodeSkeleton) c1;
-	//					} else {
-	//						System.err.println("Ordering AST with merge points added");
-	//					}
-	//
-	//					if (c2 instanceof ClassNodeSkeleton) {
-	//						cs2 = (ClassNodeSkeleton) c2;
-	//					} else {
-	//						System.err.println("Ordering AST with merge points added");
-	//					}
-	//					int pos = 0;
-	//					for (int i : cs1.mapping.getMappings().keySet()) {
-	//						if (cs2.mapping.getMappings().containsKey(i)) {
-	//							// get the Node positions relative to the parent
-	//
-	//							ClassNode c1Node = functions.get(i).getPostOrderDecendant(cs1.mapping.getMappings().get(i));
-	//							int c1Pos = c1Node.getParent().getChildren().indexOf(c1Node);
-	//
-	//							ClassNode c2Node = functions.get(i).getPostOrderDecendant(cs2.mapping.getMappings().get(i));
-	//							int c2Pos = c2Node.getParent().getChildren().indexOf(c2Node);
-	//
-	//							pos += Math.signum(
-	//									Integer.compare(c1Pos, c2Pos));
-	//						}
-	//					}
-	//					return pos;
-	//				}
-	//			});
-	Collections.sort(children);
-	for (IntermdiateAST child : children) {
-		if (child instanceof ClassNodeSkeleton) {
-			((ClassNodeSkeleton) child).orderChildren();
-		} else {
-			System.err.println("Ordering AST with merge points added");
+	/**
+	 * Uses the relative positioning across all occurrences of the nodes to
+	 * reorder the children.
+	 * TODO check if works
+	 * TODO rewrite so Nodes follow following rules
+	 * 		Node N(c1,c2,...cn)
+	 * 			each child cn must appear after all nodes that appear before it in its function
+	 */
+	public void orderChildren() {
+		sortChildren();
+		for (IntermdiateAST<D> child : children) {
+			if (child instanceof ClassNodeSkeleton) {
+				((ClassNodeSkeleton<?>) child).orderChildren();
+			} else {
+				System.err.println("Ordering AST with merge points added");
+			}
 		}
 	}
-}
-@Override
-public String toString(){
-	String s = node.getIdentifier() + " "+mapping.toString();
-	for (IntermdiateAST child : children) {
-		s += "\n\t" + child.toString().replaceAll("\n", "\n\t");
-	}
-	return s;
-}
 
-public ClassNode getNode() {
-	return node;
-}
+	private void sortChildren() {
+		NodeCostMappings<D> costs = new NodeCostMappings();
+		for(IntermdiateAST<D> child : children) {
+			costs.addNode(child);
+		}
 
-/*
- * (non-Javadoc)
- * @see merge.MergeGroup.IntermdiateAST#simpleCodeRepresentation()
- */
-@Override
-public String simpleCodeRepresentation() {
-	String representation = node.getIdentifier();
-	for (IntermdiateAST child : children) {
-		representation += "\n\t" + child.simpleCodeRepresentation().replaceAll("\n", "\n\t");
+		for(int x = 0; x < children.size(); x++) {
+			IntermdiateAST<D> childx = children.get(x);
+			for(int y = x+1; y < children.size(); y++) {
+				IntermdiateAST<D> childy = children.get(y);
+				int costxy = childx.compareTo(childy);
+				costs.addRelation(childx, childy, costxy, -costxy);
+			}
+		}
+		children = costs.orderCosts();
 	}
-	return representation;
-}
+
+	@Override
+	public String toString(){
+		String s = node.getIdentifier() + " "+mapping.toString();
+		for (IntermdiateAST<D> child : children) {
+			s += "\n\t" + child.toString().replaceAll("\n", "\n\t");
+		}
+		return s;
+	}
+
+	public ASTNode<D> getNode() {
+		return node;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see merge.MergeGroup.IntermdiateAST#simpleCodeRepresentation()
+	 */
+	@Override
+	public String simpleCodeRepresentation() {
+		String representation = node.getIdentifier();
+		for (IntermdiateAST<D> child : children) {
+			representation += "\n\t" + child.simpleCodeRepresentation().replaceAll("\n", "\n\t");
+		}
+		return representation;
+	}
+
+	/**
+	 * TODO Annotate method
+	 * @param i
+	 * @return
+	 */
+	public IntermdiateAST<D> getChild(int i) {
+		return children.get(i);
+	}
 
 }

@@ -1,0 +1,130 @@
+Parse Classes
+	parse all contained classes
+		? remember loop variables
+	For each scope that is child of compilation unit
+		add to scope list with id (packageName + '.' + scope_class_name) ?
+	? parse functions
+		
+process 
+	for rootNode (aka mergeGroup)
+		get defualt values or each parameter
+		for modified function m
+			add method path to list 
+				import.class.sub_class.[...].methodName
+			get replacement reference
+				String[] replacementParts
+				Int[] parameterMapping
+				replacementParts[0] = "newFuncName("
+				i = 0;
+				for parameter_of_merged_function p
+					if m has parameter p
+						parameterMapping[i] = position of p in m
+						i++
+						replacementParts[i] = ""
+					else
+						replacementParts[i] += (get default value for parameter) + ","
+				replacementParts[i] = remove , (if there is one) + )
+				
+	for each functionCall f in the scopes 
+		if path is in above list
+			replce with new function
+				getRootNode function belongs to
+					String replacement = replacementPart[0];
+					for (replacementPart length - 1; i)
+						replacement += f.parameter[parameterMapping[i]
+						replacement += replacementPart[i+1]
+					return replacement
+
+
+
+
+Think about
+	function know scope - of og function
+	check version of function is correct
+		put(Int, String)
+		vs
+		put(String)
+
+
+		
+Get methods to replace
+	- generate list of paths to methods changed
+		e.g. com.me.test.MyClass.SubClass.newFunc(int, String)
+	- remove all objects in scope that are not processed
+		get map of all paths
+	for all left
+		create string s with typename and method
+		if s in list of changed funcs update it (Next section)
+		
+
+update references
+	make sure method calls in scope are named
+		functionName(parameter_type1, parameter_type2)
+	get start / end pos of func to replace
+		update printer to store start + end index in rootNode
+			will mean 
+				functions will have to be inserted in order
+				or
+				string representation stored + star / end pos calculated using index of in final representation
+	find function call in that substring
+		try
+			serarch for string stored in function scope entry
+	repalce with UpdateMethodSet.getReplacement(functionName(parameter list), parameter values)
+
+				
+TODO
+	resolve functiopn call parameter types 
+	MethodreferenceUpdater - update methods
+	make work with multple files
+				
+				
+				
+				
+				
+				
+Problems
+	Only update references the the function if the objects referencing it are parsed
+	i.e.
+		cN.o.function();
+		if 
+			o.function() was updated
+			class cN is not parsed 
+		then 
+			o.function() will not be udated
+
+
+
+
+
+
+
+
+Add 
+	options for different timeouts (parsing, reference updating, type)
+	option to replace old functions with call to merged function
+		keep annotations
+			just replace function body
+		e.g.
+			f1(int a){
+				...
+			}
+			
+			f2(String b){
+				...
+			}
+			
+				\  /
+				 \/
+			
+			f1_f2(int a, String b, int fID){
+				...
+			}
+			
+			f1(int a){
+				return f1_f2(a,null);
+			}
+			
+			f2(String b){
+				return f1_f2(0,b);
+			}
+

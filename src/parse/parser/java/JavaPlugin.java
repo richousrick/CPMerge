@@ -1,49 +1,70 @@
 package parse.parser.java;
 
 import java.io.BufferedReader;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map.Entry;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.antlr.v4.runtime.CharStream;
+import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.DefaultErrorStrategy;
+import org.antlr.v4.runtime.Parser;
 import org.antlr.v4.runtime.ParserRuleContext;
+import org.antlr.v4.runtime.RecognitionException;
+import org.antlr.v4.runtime.misc.Interval;
+import org.antlr.v4.runtime.tree.TerminalNodeImpl;
 
-import dif.ClassNode;
+import costmodel.CostModel;
+import dif.ASTNode;
+import distance.APTED;
 import merge.ClassNodeSkeleton;
-import merge.IntermdiateAST;
-import merge.MergePoint;
-import merge.UniqueSet;
+import merge.FunctionMappings;
+import merge.MergeThread;
+import merge.MergedFunction;
 import parse.PluginInterface;
 import parse.ResoultionPattern;
-import parse.parser.java.comp.ASTExtractor;
 import parse.parser.java.comp.JavaLexer;
 import parse.parser.java.comp.JavaParser;
-import parse.parser.java.comp.JavaParser.BlockStatementContext;
+import parse.parser.java.comp.JavaParser.BlockContext;
 import parse.parser.java.comp.JavaParser.ClassBodyDeclarationContext;
 import parse.parser.java.comp.JavaParser.ClassDeclarationContext;
 import parse.parser.java.comp.JavaParser.CompilationUnitContext;
-import parse.parser.java.comp.JavaParser.LocalVariableDeclarationContext;
 import parse.parser.java.comp.JavaParser.MethodDeclarationContext;
 import parse.parser.java.comp.JavaParser.ModifierContext;
-import parse.parser.java.comp.JavaParser.StatementContext;
 import parse.parser.java.comp.JavaParser.TypeDeclarationContext;
-import parse.parser.java.comp.PrettyPrinter;
+import parse.parser.java.misc.merge.APTEDCostModel;
+import parse.parser.java.misc.merge.ClassNode;
+import parse.parser.java.misc.merge.MethodReferenceUpdater;
+import parse.parser.java.misc.print.FunctionPrinter;
+import parse.parser.java.misc.print.Replacement;
+import parse.parser.java.misc.reference.FunctionCall;
+import parse.parser.java.misc.reference.MergedFunctionPass;
+import parse.parser.java.misc.reference.scopes.Scope;
+import parse.parser.java.misc.validate.FunctionValidator;
+import parse.parser.java.visitors.ASTExtractor;
+import parse.parser.java.visitors.PrettyPrinter;
+import parse.parser.java.visitors.SymbolTableGenerator;
 import ref.FunctionPos;
+import ref.Helper;
 
 /**
  * TODO Annotate class
  *
  * @author Rikkey Paal
  */
-public class JavaPlugin implements PluginInterface {
+public class JavaPlugin implements PluginInterface<ParserRuleContext> {
 
 	private CompilationUnitContext unit;
+
+	private MergeThread<ParserRuleContext> mergeThread;
+
+	static MethodReferenceUpdater referenceUpdater;
+
+	private final HashMap<ClassNode, FunctionValidator> validators = new HashMap<>();
 
 	/*
 	 * (non-Javadoc)
@@ -68,6 +89,19 @@ public class JavaPlugin implements PluginInterface {
 		JavaLexer lexer = new JavaLexer(stream);
 		CommonTokenStream tokens = new CommonTokenStream(lexer);
 		JavaParser parser = new JavaParser(tokens);
+		parser.setErrorHandler(new DefaultErrorStrategy() {
+			/*
+			 * (non-Javadoc)
+			 * @see
+			 * org.antlr.v4.runtime.DefaultErrorStrategy#recover(org.antlr.v4.
+			 * runtime.Parser, org.antlr.v4.runtime.RecognitionException)
+			 */
+			@Override
+			public void recover(Parser recognizer, RecognitionException e) {
+				Helper.exitProgram("File does not match expected format");
+			}
+
+		});
 		unit = parser.compilationUnit();
 	}
 
@@ -82,7 +116,8 @@ public class JavaPlugin implements PluginInterface {
 	 */
 	@Override
 	public boolean validfile(String filename) {
-		return filename.substring(filename.lastIndexOf('.') + 1).equalsIgnoreCase("java");
+		String name = filename.substring(filename.lastIndexOf('.') + 1);
+		return name.equalsIgnoreCase("java");
 	}
 
 	/*
@@ -111,37 +146,6 @@ public class JavaPlugin implements PluginInterface {
 		return methods;
 	}
 
-	private ClassNode addChildStatements(ClassNode n) {
-		List<BlockStatementContext> blocks = null;
-		switch (n.getType()) {
-			case 0:
-				return n;
-			case 1:
-				blocks = ((MethodDeclarationContext) n.getNodeData()).methodBody().block().blockStatement();
-				break;
-			case 2:
-				for (StatementContext s : ((StatementContext) n.getNodeData()).statement()) {
-					ClassNode nt = new ClassNode(s, s.getText(), (byte) 2);
-					n.addChild(addChildStatements(nt));
-				}
-				if (((StatementContext) n.getNodeData()).block() != null) {
-					blocks = ((StatementContext) n.getNodeData()).block().blockStatement();
-				}
-				break;
-		}
-
-		if (blocks != null) {
-			for (BlockStatementContext s : blocks) {
-				if (s.localTypeDeclaration() != null) {
-					n.addChild(new ClassNode(s.localTypeDeclaration(), s.getText(), (byte) 2));
-				} else if (s.statement() != null) {
-					ClassNode nt = new ClassNode(s.statement(), s.getText(), (byte) 2);
-					n.addChild(addChildStatements(nt));
-				}
-			}
-		}
-		return n;
-	}
 
 	/**
 	 * @return A list of the classes inside the file
@@ -176,10 +180,15 @@ public class JavaPlugin implements PluginInterface {
 	@Override
 	public ArrayList<ClassNode> getClasses() {
 		ASTExtractor visitor = new ASTExtractor();
-		ArrayList<ClassNode> classes = visitor.visitCompilationUnit(unit).getChildrenAsCN();
-		for (ClassNode c : classes) {
-			c.compressClass();
+		ArrayList<ClassNode> classes = null;
+		try {
+			classes = visitor.visitCompilationUnit(unit).getChildrenAsASTNode();
+		} catch (Exception e) {
+			Helper.exitProgram(e);
 		}
+		// for (ClassNode c : classes) {
+		// c.compressClass();
+		// }
 		return classes;
 	}
 
@@ -197,7 +206,7 @@ public class JavaPlugin implements PluginInterface {
 	 * @see parse.PluginInterface#generateInstance()
 	 */
 	@Override
-	public PluginInterface generateInstance() {
+	public PluginInterface<ParserRuleContext> generateInstance() {
 		return new JavaPlugin();
 	}
 
@@ -206,7 +215,7 @@ public class JavaPlugin implements PluginInterface {
 	 * @see parse.PluginInterface#preMerge()
 	 */
 	@Override
-	public void preMerge(ClassNodeSkeleton root) {
+	public void preMerge(ClassNodeSkeleton<ParserRuleContext> root) {
 	}
 
 
@@ -215,23 +224,14 @@ public class JavaPlugin implements PluginInterface {
 	 * @see parse.PluginInterface#postMerge()
 	 */
 	@Override
-	public void postMerge(ClassNodeSkeleton root) {
+	public void postMerge(ClassNodeSkeleton<ParserRuleContext> root) {
 		// TODO Auto-generated method stub
 
 	}
 
-	private int countOccurences(String s, char target) {
-		int i = 0;
-		for (char c : s.toCharArray()) {
-			if (c == target) {
-				i++;
-			}
-		}
-		return i;
-	}
 
 	@Override
-	public int getClassStartLine(ClassNode classRoot, BufferedReader in) {
+	public int getClassStartLine(ASTNode<ParserRuleContext> classRoot, BufferedReader in) {
 		PrettyPrinter p = new PrettyPrinter(false);
 		String head = p.visitClassDeclaration((ClassDeclarationContext) classRoot.getNodeData());
 		String regexp = head.replaceAll("[\\<\\(\\[\\{\\\\\\^\\-\\=\\$\\!\\|\\]\\}\\)\\?\\*\\+\\.\\>]", "\\\\$0\\\\s*")
@@ -259,7 +259,7 @@ public class JavaPlugin implements PluginInterface {
 	 * java.io.BufferedReader)
 	 */
 	@Override
-	public FunctionPos getPositionInFile(ClassNode funcHead, BufferedReader in, int startPos) {
+	public FunctionPos getPositionInFile(ASTNode<ParserRuleContext> funcHead, BufferedReader in, int startPos) {
 		// TODO optimise calling, so finding class is done once per file
 		try {
 			PrettyPrinter p = new PrettyPrinter(false);
@@ -314,317 +314,25 @@ public class JavaPlugin implements PluginInterface {
 	 * @see parse.PluginInterface#prettyPrint(dif.ClassNode)
 	 */
 	@Override
-	public String prettyPrint(ClassNodeSkeleton c) {
-		// PrettyPrinter p = new PrettyPrinter(true);
-		// String print = "";
-		// // get function head representation
-		//
-		// for (IntermdiateAST child : c.getChildren()) {
-		// if (child instanceof ClassNodeSkeleton) {
-		// print += prettyPrintSkeleton((ClassNodeSkeleton) child, p);
-		// } else {
-		// print += prettyPrintMerge((MergePoint) child, p);
-		// }
-		// }
-		//
-		// return print;
-
-		PrettyPrinter p = new PrettyPrinter(false);
-		String head = p.visit(c.getNode().getNodeData());
-		// visit all posible heads
-
-		head = head.substring(0, head.lastIndexOf(')')).trim() + ", int fID){";
-
-		String body = "";
-		for (IntermdiateAST child : c.getChildren()) {
-			if (child instanceof ClassNodeSkeleton) {
-				body += "\t" + prettyPrintBody((ClassNodeSkeleton) child, p).replaceAll("\n", "\n\t");
-			} else {
-				body += "\t" + prettyPrintMergePoint((MergePoint) child, p).replaceAll("\n", "\n\t");
-			}
-			body += "\n";
+	public String prettyPrint(MergedFunction<ParserRuleContext> rootNode) {
+		FunctionPrinter printer = new FunctionPrinter();
+		FunctionValidator fv = validators.get(rootNode.getOriginalFunctionRoots().get(0).getParent());
+		if (fv == null) {
+			Helper.exitProgram("");
 		}
-
-		return head + "\n\t" + body.trim() + "\n}";
-
-		// LazyPrettyPrinter lpp = new LazyPrettyPrinter();
-		// return lpp.convertToString(c);
+		return printer.prettyPrintFunction(rootNode,
+				fv.getFunctionSymbols(rootNode.getID()));
 	}
 
-	private String prettyPrintBody(ClassNodeSkeleton c, PrettyPrinter p) {
-		ParserRuleContext ctx = c.getNode().getNodeData();
-		if (ctx instanceof BlockStatementContext) {
-			ctx = ((BlockStatementContext) ctx).statement();
-		}
-		if(ctx instanceof StatementContext) {
-			if (((StatementContext) ctx).IF() != null)
-				return prettyPrintBodyIf(c, p);
-
-		}
-		return prettyPrintBodyDefault(c, p);
-	}
-
-	private String prettyPrintBodyIf(ClassNodeSkeleton c, PrettyPrinter p) {
-		if (c.getChildren().get(0) instanceof MergePoint) {
-			boolean elseFlag = false;
-
-			String head = p.visit(c.getNode().getNodeData());
-			if(head.endsWith("else")) {
-				head = head.substring(0,head.length()-4);
-				elseFlag = true;
-			}
-			head += "{";
-
-			// get list of cases for if and else
-			HashMap<UniqueSet, ArrayList<ClassNodeSkeleton>> ifCases = new HashMap<>();
-			HashMap<UniqueSet, ArrayList<ClassNodeSkeleton>> elseCases = new HashMap<>();
-
-			for(Entry<UniqueSet, ArrayList<ClassNodeSkeleton>> options:((MergePoint)c.getChildren().get(0)).getMergeOptions().entrySet()) {
-				if (elseFlag) {
-					if (options.getValue().get(0).toString().startsWith("then")) {
-						ArrayList<ClassNodeSkeleton> tmp = new ArrayList<>();
-						tmp.add(options.getValue().get(0));
-						ifCases.put(options.getKey(), tmp);
-
-						tmp = new ArrayList<>();
-						tmp.add(options.getValue().get(1));
-						elseCases.put(options.getKey(), tmp);
-					} else {
-						ArrayList<ClassNodeSkeleton> tmp = new ArrayList<>();
-						tmp.add(options.getValue().get(1));
-						ifCases.put(options.getKey(), tmp);
-
-						tmp = new ArrayList<>();
-						tmp.add(options.getValue().get(0));
-						elseCases.put(options.getKey(), tmp);
-					}
-				} else {
-					ArrayList<ClassNodeSkeleton> tmp = new ArrayList<>();
-					tmp.add(options.getValue().get(0));
-					ifCases.put(options.getKey(), tmp);
-				}
-			}
-
-
-			head += "\n\t" + prettyPrintMergePoint(new MergePoint(ifCases, c.getMergeGroup(), c, 0), p)
-			.replaceAll("\n", "\n\t").trim();
-			head += "\n}";
-			if (elseFlag) {
-				head += " else {";
-				head += "\n\t" + prettyPrintMergePoint(new MergePoint(ifCases, c.getMergeGroup(), c, 0), p)
-				.replaceAll("\n", "\n\t").trim();
-				head += "\n}";
-			}
-			return head;
-		} else {
-			boolean elseFlag = false;
-			String head = p.visit(c.getNode().getNodeData());
-			if (head.endsWith("else")) {
-				head = head.substring(0, head.length() - 4);
-				elseFlag = true;
-			}
-			head += "{\n\t";
-
-			if (elseFlag) {
-				if (c.getChildren().get(0).toString().startsWith("then")) {
-					head += p.visit(((ClassNodeSkeleton) c.getChildren().get(0)).getNode().getNodeData())
-							.replaceAll("\n", "\n\t");
-					head = head.trim() + "\n} else {\n\t";
-					head += p.visit(((ClassNodeSkeleton) c.getChildren().get(1)).getNode().getNodeData())
-							.replaceAll("\n", "\n\t");
-				} else {
-					head += p.visit(((ClassNodeSkeleton) c.getChildren().get(1)).getNode().getNodeData())
-							.replaceAll("\n", "\n\t");
-					head = head.trim() + "\n} else {\n";
-					head += p.visit(((ClassNodeSkeleton) c.getChildren().get(0)).getNode().getNodeData())
-							.replaceAll("\n", "\n\t");
-				}
-			} else {
-				head += p.visit(((ClassNodeSkeleton) c.getChildren().get(0)).getNode().getNodeData()).replaceAll("\n",
-						"\n\t");
-			}
-			return head.trim() + "\n}";
-		}
-	}
-
-	private String prettyPrintBodyDefault(ClassNodeSkeleton c, PrettyPrinter p) {
-		String body = p.visit(c.getNode().getNodeData());
-
-		for (IntermdiateAST child : c.getChildren()) {
-			if (child instanceof ClassNodeSkeleton) {
-				body += prettyPrintBody((ClassNodeSkeleton) child, p);
-			} else {
-				body += prettyPrintMergePoint((MergePoint) child, p);
-			}
-			body += "\n";
-		}
-		return body.trim();
-	}
-
-	private String prettyPrintMergePoint(MergePoint c, PrettyPrinter p) {
-		int options = c.getMergeOptions().size();
-		// if only 1 option use if statement
-		boolean useSwitch = options != 1;
-
-		// if there are two options that make up all possibilities then use if
-		// else
-		if (useSwitch && options == 2) {
-			ArrayList<Integer> sets = new ArrayList<>();
-			for (UniqueSet set : c.getMergeOptions().keySet()) {
-				sets.addAll(set.getSetFuncIds());
-			}
-			List<Integer> containerSet = c.getParent().getUniqueSet().getSetFuncIds();
-			if (sets.size() == containerSet.size() && sets.containsAll(containerSet)) {
-				useSwitch = false;
-			}
-		}
-
-		return useSwitch ? prettyPrintMergePointSwitch(c, p) : prettyPrintMergePointIf(c, p);
-
-	}
-
-	private String prettyPrintMergePointIf(MergePoint c, PrettyPrinter p) {
-		// get entries of the if and else cases
-		Entry<UniqueSet, ArrayList<ClassNodeSkeleton>> caseIf = null;
-		Entry<UniqueSet, ArrayList<ClassNodeSkeleton>> caseElse = null;
-		Iterator<Entry<UniqueSet, ArrayList<ClassNodeSkeleton>>> iterator = c.getMergeOptions().entrySet().iterator();
-		caseIf = iterator.next();
-		if (iterator.hasNext()) {
-			caseElse = iterator.next();
-			if (caseElse.getKey().getSetFuncIds().size() < caseIf.getKey().getSetFuncIds().size()) {
-				Entry<UniqueSet, ArrayList<ClassNodeSkeleton>> tmp = caseElse;
-				caseElse = caseIf;
-				caseIf = tmp;
-			}
-		}
-
-		// init variables declared in if statement
-		ArrayList<ClassNodeSkeleton> declarationsToInit = getDeclarationsToInit(c);
-		String str = initVariableDecalarations(declarationsToInit, p);
-
-		// add if head
-		str += "\nif(";
-		for (int id : caseIf.getKey().getSetFuncIds()) {
-			str += "fID == " + id + " || ";
-		}
-
-		// add if body
-		str = str.substring(0, str.length() - 3) + "){";
-		for (ClassNodeSkeleton cnc : caseIf.getValue()) {
-			if (declarationsToInit.contains(cnc)) {
-				str += "\n\t" + printVariableDeclaration(cnc, p);
-			} else {
-				str += "\n\t" + prettyPrintBody(cnc, p);
-			}
-		}
-		str = str.trim() + "\n}";
-
-		// add else case if
-		if (caseElse != null) {
-			str += " else {";
-			for (ClassNodeSkeleton cnc : caseElse.getValue()) {
-				if (declarationsToInit.contains(cnc)) {
-					str += "\n\t" + printVariableDeclaration(cnc, p);
-				} else {
-					str += "\n\t" + prettyPrintBody(cnc, p);
-				}
-			}
-			str = str.trim() + "\n}";
-		}
-		return str.trim();
-	}
-
-	private String prettyPrintMergePointSwitch(MergePoint c, PrettyPrinter p) {
-		// init variables declared in if statement
-		ArrayList<ClassNodeSkeleton> declarationsToInit = getDeclarationsToInit(c);
-		String str = initVariableDecalarations(declarationsToInit, p);
-
-		// add switch head
-		str += "\nswitch (fID) {";
-
-		for (Entry<UniqueSet, ArrayList<ClassNodeSkeleton>> option : c.getMergeOptions().entrySet()) {
-			// add cases
-			for (int id : option.getKey().getSetFuncIds()) {
-				str += "\n\tcase " + id + ":";
-			}
-			String body = "";
-			// add body
-			for (ClassNodeSkeleton cnc : option.getValue()) {
-				if (declarationsToInit.contains(cnc)) {
-					body += "\n\t\t" + printVariableDeclaration(cnc, p);
-				} else {
-					body += "\n\t\t" + prettyPrintBody(cnc, p).replaceAll("\n", "\n\t\t");
-				}
-
-			}
-			String pattern = "[\\s.]*return.*;\\s*$";
-			if (!body.matches(pattern)) {
-				body += "\n\t\tbreak;";
-			}
-			str += body;
-		}
-		str += "\n}";
-		return str.trim();
-	}
-
-	private String initVariableDecalarations(ArrayList<ClassNodeSkeleton> declarationsToInit, PrettyPrinter p) {
-		p.setDoVariableInit(false);
-		ArrayList<String> decs = new ArrayList<>();
-		for (ClassNodeSkeleton node : declarationsToInit) {
-			String str = p.visit(node.getNode().getNodeData());
-			if (!decs.contains(str)) {
-				decs.add(str);
-			}
-		}
-
-		p.setDoVariableInit(true);
-		String declarations = "";
-		for (String s : decs) {
-			declarations += s + "\n";
-		}
-
-		return declarations.trim();
-	}
-
-	private String printVariableDeclaration(ClassNodeSkeleton declaration, PrettyPrinter p) {
-		p.setDoVariableDec(false);
-		String declarations = p.visit(declaration.getNode().getNodeData());
-		p.setDoVariableDec(true);
-		return declarations.trim();
-	}
-
-	/**
-	 * Gets a list of varaibleDecalrations that need to be initalised
-	 *
-	 * @return
-	 */
-	private ArrayList<ClassNodeSkeleton> getDeclarationsToInit(MergePoint c) {
-		// get LocalVariableDeclarationContext
-		ArrayList<ClassNodeSkeleton> childDeclarations = new ArrayList<>();
-		for (IntermdiateAST child : c.getChildren()) {
-			if (child instanceof ClassNodeSkeleton) {
-				ParserRuleContext ctx = ((ClassNodeSkeleton) child).getNode().getNodeData();
-				if (ctx instanceof BlockStatementContext) {
-					ctx = ((BlockStatementContext) ctx).localVariableDeclaration();
-				}
-				if (ctx instanceof LocalVariableDeclarationContext) {
-					childDeclarations.add((ClassNodeSkeleton) child);
-				}
-			}
-		}
-		// TODO trim down list better
-
-		return childDeclarations;
-	}
 
 	/*
 	 * (non-Javadoc)
 	 * @see parse.PluginInterface#genFunctionName(dif.ClassNode[])
 	 */
 	@Override
-	public String genFunctionName(ArrayList<ClassNode> classes) {
+	public String genFunctionName(ArrayList<ASTNode<ParserRuleContext>> classes) {
 		String retString = "";
-		for (ClassNode c : classes) {
+		for (ASTNode<ParserRuleContext> c : classes) {
 			retString += c.getIdentifier().substring(0, 1).toUpperCase();
 			if (c.getIdentifier().length() > 1) {
 				retString += c.getIdentifier().substring(1);
@@ -633,14 +341,278 @@ public class JavaPlugin implements PluginInterface {
 		return retString;
 	}
 
+
+
+	private int getFuncPosition(MergedFunction<ParserRuleContext> func, String fileContent) {
+		ParserRuleContext data = func.getRootNode().getNode().getNodeData().getParent().getParent();
+		String funcRep = getSourceRepresentation(data);
+		// TODO use startIndex of classNameIndex
+		int pos = fileContent.indexOf(funcRep, 0);
+		return pos;
+	}
+
+	private String getSourceRepresentation(ParserRuleContext data) {
+		int startPos = data.start.getStartIndex();
+		int endPos = data.stop.getStopIndex();
+		CharStream cs = data.start.getInputStream();
+		return cs.getText(new Interval(startPos, endPos));
+	}
+
+	private int getStartPos(ClassBodyDeclarationContext data) {
+		int startPos = -1;
+		int childIndex = data.getParent().children.indexOf(data);
+		if (childIndex == 0) {
+			startPos = data.getParent().start.getStopIndex();
+		} else {
+			Object child = data.getParent().getChild(childIndex - 1);
+			if (child instanceof TerminalNodeImpl) {
+				startPos = ((TerminalNodeImpl) child).symbol.getStopIndex();
+			} else {
+				startPos = ((ParserRuleContext) child).stop.getStopIndex();
+			}
+		}
+		startPos++;
+		return startPos;
+	}
+
 	/*
 	 * (non-Javadoc)
-	 * @see parse.PluginInterface#updateFunctionName(merge.ClassNodeSkeleton,
-	 * merge.ClassNodeSkeleton, int, java.lang.String)
+	 * @see parse.PluginInterface#startWriting()
 	 */
 	@Override
-	public String updateFunctionName(ClassNodeSkeleton originalRoot, ClassNodeSkeleton newRoot, int fID, String code) {
-		return "";
+	public void startWriting() {
+
 	}
+
+
+
+	static synchronized void setMergedFunctions(ArrayList<MergedFunction<ParserRuleContext>> functions) {
+		if (MethodReferenceUpdater.initMethodReferenceUpdater(functions)) {
+			referenceUpdater = new MethodReferenceUpdater();
+			PrettyPrinter p = new PrettyPrinter(false);
+			HashMap<String, MergedFunctionPass> newFunctionPaths = new HashMap<>();
+			// get mapping of changed functions to new
+			for (MergedFunction<ParserRuleContext> r : functions) {
+				for (ASTNode<ParserRuleContext> c : r.getOriginalFunctionRoots()) {
+					newFunctionPaths.put(p.getNodeName(c.getNodeData()),
+							new MergedFunctionPass((MethodDeclarationContext) c.getNodeData(), r));
+				}
+			}
+			if (Scope.needResolving()) {
+				Scope.resoveAllReferences(newFunctionPaths);
+			}
+
+		}
+	}
+
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#updateReferences(java.util.ArrayList)
+	 */
+	@Override
+	public String updateReferences(String fileContnent, ArrayList<MergedFunction<ParserRuleContext>> mergedFunctions) {
+		try {
+			JavaPlugin.setMergedFunctions(mergedFunctions);
+			String name = mergeThread.getFile().getName();
+			name = name.substring(0, name.indexOf("."));
+			ArrayList<FunctionCall> functionCalls = Scope.getFunctionCallsToUpdate(name);
+			if(functionCalls.isEmpty())
+				return fileContnent;
+			else
+				return referenceUpdater.updateReferences(functionCalls, fileContnent);
+		} catch (Throwable e) {
+			e.printStackTrace();
+			Helper.exitProgram("");
+		}
+		// remove all symbols that are of unparsed type + functions referencing
+		// those symbols
+
+		return fileContnent;
+	}
+
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#initUpdateReferences(java.lang.String,
+	 * java.util.ArrayList)
+	 */
+	@Override
+	public String initUpdateReferences(String currFileRep, ArrayList<MergedFunction<ParserRuleContext>> updatedFunctions) {
+		// if no updated functions no need to init
+		if (updatedFunctions.size() != 0) {
+
+			try {
+				parse(CharStreams.fromStream(new ByteArrayInputStream(currFileRep.getBytes())));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+
+			SymbolTableGenerator gen = new SymbolTableGenerator();
+			String name = mergeThread.getFile().getName();
+			name = name.substring(0, name.indexOf("."));
+			try {
+				gen.processClass(unit, name);
+			} catch (Throwable e) {
+				Helper.exitProgram(e.getMessage());
+			}
+		}
+		return currFileRep;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#destroyUpdateReferences(java.lang.String,
+	 * java.util.ArrayList)
+	 */
+	@Override
+	public String destroyUpdateReferences(String currFileRep, ArrayList<MergedFunction<ParserRuleContext>> updatedFunctions) {
+		// TODO Auto-generated method stub
+		return currFileRep;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#setMergeThread(merge.MergeThread)
+	 */
+	@Override
+	public void setMergeThread(MergeThread<ParserRuleContext> thread) {
+		mergeThread = thread;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#copyNode(dif.ASTNode, boolean)
+	 */
+	@Override
+	public ASTNode<?> copyNode(ASTNode<?> node, boolean copyChildren) {
+		if (copyChildren)
+			return new ClassNode((ClassNode) node);
+		else
+			return new ClassNode((ClassNode) node, 0);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#getApted()
+	 */
+	@Override
+	public APTED<? extends CostModel<ParserRuleContext>, ParserRuleContext> getApted() {
+		return new APTED<CostModel<ParserRuleContext>, ParserRuleContext>(new APTEDCostModel());
+	}
+
+	private final ArrayList<Replacement> replacements = new ArrayList<>();
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#updateFunctionBody(merge.RootNode,
+	 * java.lang.String)
+	 */
+	@Override
+	public String updateFunctionBodies(MergedFunction<ParserRuleContext> nodes, String currFileRep) {
+		for(ASTNode<ParserRuleContext> node: nodes.getOriginalFunctionRoots()){
+			// get representation of function
+			ClassBodyDeclarationContext functionCtx = (ClassBodyDeclarationContext) node.getNodeData().getParent()
+					.getParent();
+			String function = getSourceRepresentation(functionCtx);
+
+			BlockContext bodyCtx = ((MethodDeclarationContext) node.getNodeData()).methodBody().block();
+			String functionBody = getSourceRepresentation(bodyCtx);
+			functionBody = functionBody.substring(1, functionBody.length() - 1).trim();
+
+			MethodDeclarationContext meth = (MethodDeclarationContext) node.getNodeData();
+			PrettyPrinter p = new PrettyPrinter(false);
+
+			boolean hasReturn = !p.visit(meth.typeTypeOrVoid()).equals("void");
+
+			String returnStament = (hasReturn ? "return " : "") + meth.IDENTIFIER().getText() + "("
+					+ p.printParameterListNames(meth.formalParameters()) + ");";
+
+			String emptyFunction = function.replaceAll(Pattern.quote(functionBody), returnStament);
+			replacements.add(new Replacement(functionCtx.start.getStartIndex(), functionCtx.stop.getStopIndex(),
+					emptyFunction, function, ""));
+		}
+		return currFileRep;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#removeFunction(dif.ClassNode,
+	 * java.lang.String)
+	 */
+	@Override
+	public String removeFunctions(MergedFunction<ParserRuleContext> functions, String fileContent) {
+		for(ASTNode<ParserRuleContext> function: functions.getOriginalFunctionRoots()){
+			ClassBodyDeclarationContext data = (ClassBodyDeclarationContext) function.getNodeData().getParent()
+					.getParent();
+			// TODO replace first instance in class
+			String s = data.start.getInputStream()
+					.getText(new Interval(getStartPos(data), data.stop.getStopIndex()));
+			replacements.add(new Replacement(getStartPos(data), data.stop.getStopIndex(), "", s, ""));
+		}
+		return fileContent;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#insertFunction(merge.ClassNodeSkeleton)
+	 */
+	@Override
+	public String insertFunction(MergedFunction<ParserRuleContext> root, String fileContent) {
+		int pos = getFuncPosition(root, fileContent);
+
+		String funcRep = root.getStringRepresentation();
+		if (funcRep == null) {
+			funcRep = prettyPrint(root);
+			root.setStringRepresentation(funcRep.substring(0, funcRep.indexOf('{')));
+		}
+		// get num tabs
+		int retPos = fileContent.lastIndexOf('\n', pos);
+		String indent = "";
+		try {
+			indent = fileContent.substring(retPos + 1, pos);
+		} catch (StringIndexOutOfBoundsException e) {
+
+		}
+		funcRep = "\n\n" + indent + funcRep.replaceAll("\n", "\n" + indent) + "\n";
+
+		ParserRuleContext data = root.getOriginalFunctionRoots().get(0).getNodeData().getParent().getParent();
+		String function = getSourceRepresentation(data);
+
+		int insertPos = getStartPos((ClassBodyDeclarationContext) data);
+		replacements.add(new Replacement(insertPos, insertPos,
+				funcRep,
+				function, ""));
+
+		return fileContent;
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#postProcessFile(java.lang.String)
+	 */
+	@Override
+	public String postProcessFile(String currFileRep) {
+		return Replacement.replace(replacements, currFileRep, false, Helper.deleteOldFunctions);
+	}
+
+	/*
+	 * (non-Javadoc)
+	 * @see parse.PluginInterface#validateMergeGroup(java.util.ArrayList,
+	 * merge.FunctionMappings)
+	 */
+	@Override
+	public ArrayList<ArrayList<Integer>> validateMergeGroup(ArrayList<ArrayList<Integer>> groups,
+			FunctionMappings<ParserRuleContext> mappings, ArrayList<? extends ASTNode<ParserRuleContext>> functions) {
+		if (functions.size() > 0) {
+			FunctionValidator validator = new FunctionValidator(functions);
+			validators.put((ClassNode) functions.get(0).getParent(),
+					validator);
+			return validator.validateMergeGroup(groups, mappings);
+		} else
+			return new ArrayList<>();
+
+	}
+
 
 }

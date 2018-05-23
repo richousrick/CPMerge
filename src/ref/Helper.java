@@ -2,11 +2,15 @@ package ref;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNodeImpl;
+
+import merge.MergedFunction;
 
 /**
  * TODO Annotate class
@@ -15,9 +19,18 @@ import org.antlr.v4.runtime.tree.TerminalNodeImpl;
  */
 public class Helper {
 
+	private static HashMap<String, String> completedSourceFiles = new HashMap<String, String>();
+	private static boolean sourceLock = false;
+
+	private static ArrayList<MergedFunction<?>> updatedFunctions = new ArrayList<>();
+	private static boolean functionLock = false;
+
 	public static final boolean test = true;
 
 	public static boolean verbose;
+
+	public static boolean deleteOldFunctions = false;
+	private static boolean forceExitEnabled = true;
 
 	public static boolean parserContextEqual(ParserRuleContext p1, ParserRuleContext p2, boolean matchContent,
 			boolean recursive) {
@@ -51,6 +64,32 @@ public class Helper {
 		return true;
 	}
 
+	public synchronized static void addSourceFIle(String filename, String fileContent) throws IllegalAccessException {
+		if (!sourceLock) {
+			completedSourceFiles.put(filename, fileContent);
+		} else
+			throw new IllegalAccessException(
+					"thread trying to insert completed sourceFile after registered thread has ended");
+	}
+
+	public synchronized static HashMap<String, String> getSourceFiles() {
+		sourceLock = true;
+		return completedSourceFiles;
+	}
+
+	public synchronized static void addUpdatedFunction(MergedFunction<?> function) throws IllegalAccessException {
+		if (!functionLock) {
+			updatedFunctions.add(function);
+		} else
+			throw new IllegalAccessException(
+					"thread trying to insert merged function after registered thread has ended");
+	}
+
+	public synchronized static ArrayList<MergedFunction<?>> getUpdatedFunctions() {
+		functionLock = true;
+		return updatedFunctions;
+	}
+
 	public synchronized static void printToSTD(String stringToPrint, boolean checkVerbose) {
 		if (checkVerbose && !verbose)
 			return;
@@ -70,6 +109,38 @@ public class Helper {
 
 	public synchronized static CharStream readFile(File f) throws IOException {
 		return CharStreams.fromPath(f.toPath());
+	}
+
+	public synchronized static void exitProgram(String reason) {
+		if (!forceExitEnabled)
+			return;
+		System.err.println("Fatal error: " + reason);
+		System.exit(1);
+	}
+
+	public synchronized static void exitProgram(Exception e) {
+		if (!forceExitEnabled)
+			return;
+		System.err.println("Fatal error:");
+		e.printStackTrace();
+		System.exit(1);
+	}
+
+	/**
+	 * TODO Annotate method
+	 */
+	public static void disableForceExit() {
+		forceExitEnabled = false;
+	}
+
+	private static Language<?> languageInstance = null;
+
+	public static Language<?> getLanguageInstance() {
+		return languageInstance;
+	}
+
+	public static void setLanguageInstance(Language<?> instance) {
+		Helper.languageInstance = instance;
 	}
 
 

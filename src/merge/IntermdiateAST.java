@@ -3,7 +3,7 @@ package merge;
 import java.util.ArrayList;
 import java.util.Map.Entry;
 
-import dif.ClassNode;
+import dif.ASTNode;
 
 /**
  * Used to build the structure of the AST tree.
@@ -12,7 +12,7 @@ import dif.ClassNode;
  *
  * @author Rikkey Paal
  */
-public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
+public abstract class IntermdiateAST<D> implements Comparable<IntermdiateAST<D>> {
 
 	/**
 	 * What the unique set of the node is
@@ -20,8 +20,8 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 	 */
 	protected UniqueSet set = null;
 
-	protected final ArrayList<IntermdiateAST> children = new ArrayList<>();
-	protected IntermdiateAST parent;
+	protected ArrayList<IntermdiateAST<D>> children = new ArrayList<>();
+	protected IntermdiateAST<D> parent;
 	private final MergeGroup mergeGroup;
 
 	/**
@@ -41,7 +41,7 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 		this.mergeGroup = mergeGroup;
 	}
 
-	public void setParent(IntermdiateAST parent) {
+	public void setParent(IntermdiateAST<D> parent) {
 		if (this.parent != null) {
 			getParent().removeChild(this);
 		}
@@ -50,7 +50,7 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 		updateUniqueSet();
 	}
 
-	public void setParent(int childPos, IntermdiateAST parent) {
+	public void setParent(int childPos, IntermdiateAST<D> parent) {
 		if (this.parent != null) {
 			getParent().removeChild(this);
 		}
@@ -59,17 +59,17 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 		updateUniqueSet();
 	}
 
-	public void removeChild(IntermdiateAST c) {
+	public void removeChild(IntermdiateAST<D> c) {
 		children.remove(c);
 	}
 
 	public UniqueSet getUniqueSet() {
-		return set;
+		return set != null ? set : parent.getUniqueSet();
 	}
 
 	private void updateUniqueSet() {
 		if (parent instanceof MergePoint) {
-			for (Entry<UniqueSet, ArrayList<ClassNodeSkeleton>> sets : ((MergePoint) parent).getMergeOptions()
+			for (Entry<UniqueSet, ArrayList<ClassNodeSkeleton<D>>> sets : ((MergePoint<D>) parent).getMergeOptions()
 					.entrySet()) {
 				if (sets.getValue().contains(this)) {
 					set = sets.getKey();
@@ -86,7 +86,7 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 	 *
 	 * @return
 	 */
-	public IntermdiateAST getParent() {
+	public IntermdiateAST<D> getParent() {
 		return parent;
 	}
 
@@ -94,7 +94,7 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 	/**
 	 * @return the children
 	 */
-	public ArrayList<IntermdiateAST> getChildren() {
+	public ArrayList<? extends IntermdiateAST<D>> getChildren() {
 		return children;
 	}
 
@@ -102,18 +102,18 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 	 * @see java.lang.Comparable#compareTo(java.lang.Object)
 	 */
 	@Override
-	public int compareTo(IntermdiateAST csComp) {
+	public int compareTo(IntermdiateAST<D> csComp) {
 		if (parent != csComp.parent)
 			return -1;
-		ClassNodeSkeleton cs1 = null, cs = null;
+		ClassNodeSkeleton<D> cs1 = null, cs = null;
 		if (this instanceof ClassNodeSkeleton) {
-			cs1 = (ClassNodeSkeleton) this;
+			cs1 = (ClassNodeSkeleton<D>) this;
 		} else {
 			System.err.println("Ordering AST with merge points added");
 		}
 
 		if (csComp instanceof ClassNodeSkeleton) {
-			cs = (ClassNodeSkeleton) csComp;
+			cs = (ClassNodeSkeleton<D>) csComp;
 		} else {
 			System.err.println("Ordering AST with merge points added");
 		}
@@ -122,10 +122,10 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 			if (cs.mapping.getMappings().containsKey(i)) {
 				// get the Node positions relative to the parent
 
-				ClassNode c1Node = mergeGroup.functions.get(i).getPostOrderDecendant(cs1.mapping.getMappings().get(i));
+				ASTNode<?> c1Node = mergeGroup.functions.get(i).getPostOrderDecendant(cs1.mapping.getMappings().get(i));
 				int c1Pos = c1Node.getParent().getChildren().indexOf(c1Node);
 
-				ClassNode c2Node = mergeGroup.functions.get(i).getPostOrderDecendant(cs.mapping.getMappings().get(i));
+				ASTNode<?> c2Node = mergeGroup.functions.get(i).getPostOrderDecendant(cs.mapping.getMappings().get(i));
 				int c2Pos = c2Node.getParent().getChildren().indexOf(c2Node);
 
 				pos += Math.signum(
@@ -139,7 +139,7 @@ public abstract class IntermdiateAST implements Comparable<IntermdiateAST> {
 
 	public void setUniqueSetR(UniqueSet uniqueSet) {
 		setUniqueSet(uniqueSet);
-		for (IntermdiateAST child : children) {
+		for (IntermdiateAST<D> child : children) {
 			if (child instanceof ClassNodeSkeleton) {
 				child.setUniqueSet(set);
 			} else {

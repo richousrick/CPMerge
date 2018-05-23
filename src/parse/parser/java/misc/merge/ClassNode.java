@@ -1,4 +1,4 @@
-package dif;
+package parse.parser.java.misc.merge;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -8,7 +8,11 @@ import java.util.HashSet;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
+import dif.ASTNode;
 import node.Node;
+import parse.parser.java.comp.JavaParser.BlockStatementContext;
+import parse.parser.java.comp.JavaParser.StatementContext;
+import ref.Helper;
 
 /**
  * This class is used to represent the parsed code in a way that can be easier
@@ -16,7 +20,7 @@ import node.Node;
  *
  * @author Rikkey Paal
  */
-public class ClassNode extends Node<ParserRuleContext> {
+public class ClassNode extends ASTNode<ParserRuleContext> {
 
 	private class MinimiseReturns {
 		int pos;
@@ -38,7 +42,6 @@ public class ClassNode extends Node<ParserRuleContext> {
 
 	}
 
-
 	private ClassNode[] PORepresentation;
 
 	private String identifier;
@@ -53,7 +56,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 * 3 : temporary<br>
 	 * 4 : merge point
 	 */
-	private final byte type;
+	private byte type;
 
 	/**
 	 * Post order position of this node, used for debugging.
@@ -67,7 +70,6 @@ public class ClassNode extends Node<ParserRuleContext> {
 
 	private ClassNode parent = null;
 
-
 	/**
 	 * Initializes the ClassNode class by deep copying another node.
 	 *
@@ -76,21 +78,24 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 */
 	public ClassNode(ClassNode toCopy) {
 		this(toCopy, 0);
-		for (final ClassNode c : toCopy.getChildrenAsCN()) {
+		for (final ClassNode c : toCopy.getChildrenAsASTNode()) {
 			addChild(new ClassNode(c));
 		}
 	}
 
 	/**
 	 * Copys the content of toCopy, not including its children
-	 * @param toCopy Node to copy
-	 * @param shallowCopyFlag only used to specify this constructor
+	 *
+	 * @param toCopy
+	 *            Node to copy
+	 * @param shallowCopyFlag
+	 *            only used to specify this constructor
 	 */
-	public ClassNode(ClassNode toCopy, int noChildrenFlag){
+	public ClassNode(ClassNode toCopy, int noChildrenFlag) {
 		super(toCopy.getNodeData());
 		type = toCopy.type;
 		identifier = new String(toCopy.identifier);
-		if(toCopy.mustMatch!=null) {
+		if (toCopy.mustMatch != null) {
 			mustMatch = new String(toCopy.mustMatch);
 		}
 	}
@@ -145,7 +150,6 @@ public class ClassNode extends Node<ParserRuleContext> {
 		this.mustMatch = mustMatch;
 	}
 
-
 	/*
 	 * (non-Javadoc)
 	 * @see node.Node#addChild(node.Node)
@@ -156,7 +160,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 			((ClassNode) c).setParent(this);
 			super.addChild(c);
 		} else {
-			System.err.println("Trying to add a null node to the class");
+			Helper.exitProgram("Trying to add a null node to the class");
 		}
 	}
 
@@ -187,7 +191,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 * @param node
 	 *            to be removed
 	 */
-	public void removeChild(ClassNode node) {
+	private void removeChild(ClassNode node) {
 		getChildren().remove(node);
 	}
 
@@ -197,7 +201,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 * @param children
 	 *            to remove
 	 */
-	public void removeChildren(Collection<ClassNode> children) {
+	private void removeChildren(Collection<ClassNode> children) {
 		getChildren().removeAll(children);
 	}
 
@@ -213,10 +217,9 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 * @param parent
 	 *            the parent to set
 	 */
-	public void setParent(ClassNode parent) {
+	private void setParent(ClassNode parent) {
 		this.parent = parent;
 	}
-
 
 	/**
 	 * Returns the children of the class as a list of {@link ClassNode}
@@ -225,7 +228,8 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 * @throws ClassCastException
 	 *             if there is a child that is not a ClassNode
 	 */
-	public ArrayList<ClassNode> getChildrenAsCN() throws ClassCastException {
+	@Override
+	public ArrayList<ClassNode> getChildrenAsASTNode() throws ClassCastException {
 		final ArrayList<ClassNode> nodes = new ArrayList<>();
 		for (final Node<ParserRuleContext> child : getChildren()) {
 			nodes.add((ClassNode) child);
@@ -236,6 +240,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 	/**
 	 * @return the identifier
 	 */
+	@Override
 	public String getIdentifier() {
 		return identifier;
 	}
@@ -243,6 +248,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 	/**
 	 * @return the parent
 	 */
+	@Override
 	public ClassNode getParent() {
 		return parent;
 	}
@@ -250,6 +256,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 	/**
 	 * @return the size
 	 */
+	@Override
 	public int getSize() {
 		if (size == -1)
 			return recalculateSize();
@@ -260,10 +267,10 @@ public class ClassNode extends Node<ParserRuleContext> {
 	/**
 	 * @return the {@link #type}
 	 */
+	@Override
 	public byte getType() {
 		return type;
 	}
-
 
 	/**
 	 * {@link #compressMethod() Compresses all methods} that are inside the
@@ -283,7 +290,8 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 *            compressing.
 	 */
 	private void compressClass(boolean recalulateSize) {
-		for (final ClassNode c : getChildrenAsCN()) {
+		for (ASTNode<?> a : getChildrenAsASTNode()) {
+			ClassNode c = (ClassNode) a;
 			if (c.getType() == 2) {
 				c.compressMethod();
 				if (recalulateSize) {
@@ -293,9 +301,12 @@ public class ClassNode extends Node<ParserRuleContext> {
 				c.compressClass(false);
 			}
 		}
-		setPostOrderList(1);
+		if (getType() == 1) {
+			setPostOrderList(1);
+		}
 	}
 
+	@Override
 	public ClassNode getPostOrderDecendant(int postOrderPos) {
 		if (pos == postOrderPos)
 			return this;
@@ -304,8 +315,12 @@ public class ClassNode extends Node<ParserRuleContext> {
 			root = root.parent;
 		}
 
-		if(root.PORepresentation[postOrderPos - 1].pos!=postOrderPos){
-			System.err.println(root.PORepresentation[postOrderPos - 1].pos+"!="+postOrderPos);
+		if (root.PORepresentation.length < postOrderPos - 1) {
+			Helper.exitProgram("??");
+		}
+
+		if (root.PORepresentation[postOrderPos - 1].pos != postOrderPos) {
+			System.err.println(root.PORepresentation[postOrderPos - 1].pos + "!=" + postOrderPos);
 		}
 
 		return root.PORepresentation[postOrderPos - 1];
@@ -320,41 +335,82 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 * chain.
 	 */
 	private void compressMethod() {
-		final ArrayList<ClassNode> children = getChildrenAsCN();
-		for (final ClassNode c : children) {
-			c.compressMethod();
+		ArrayList<ClassNode> children = getChildrenAsASTNode();
+		ArrayList<ClassNode> newChildren = new ArrayList<>();
+
+		if (getNodeData() instanceof StatementContext && identifier.startsWith("if")) {
+			return;
 		}
-		if (children.size() == 1 && children.get(0).getType() == 2) {
-			identifier += "." + children.get(0).getIdentifier();
-			getChildren().remove(0);
-			for (final ClassNode c : children.get(0).getChildrenAsCN()) {
-				addChild(c);
+
+		// if a if statement
+
+		if (!children.isEmpty() && children.get(0).getIdentifier().startsWith("if")
+				&& getNodeData() instanceof StatementContext) {
+			for (ClassNode c : children) {
+				c.compressMethod();
 			}
+
+			identifier = "if." + children.get(1).getIdentifier();
+
+			newChildren.add(children.get(2));
+			if (children.size() > 3) {
+				newChildren.add(children.get(4));
+			}
+		} else {
+			// otherwise
+			for (ClassNode c : children) {
+				c.compressMethod();
+				if (!(c.getNodeData() instanceof BlockStatementContext)) {
+					identifier += "." + c.getIdentifier();
+					newChildren.addAll(c.getChildrenAsASTNode());
+				} else {
+					newChildren.add(c);
+				}
+			}
+
 		}
+
+		removeChildren(getChildrenAsASTNode());
+
+		for (ClassNode c : newChildren) {
+			addChild(c);
+		}
+
+
+		// if (children.size() == 1
+		// && children.get(0).getType() == 2 &
+		// identifier.equals("BlockStatement")) {
+		// identifier += "." + children.get(0).getIdentifier();
+		// getChildren().remove(0);
+		// for (final ClassNode c : children.get(0).getChildrenAsASTNode()) {
+		// addChild(c);
+		// }
+		// }
+
 	}
 
 	private void setPostOrderList(int start) {
 		int curr = start;
 		ArrayList<ClassNode> postOrderList = new ArrayList<>();
-		for (ClassNode child : getChildrenAsCN()) {
-			if(type==0){
-				curr=start;
+		for (ClassNode child : getChildrenAsASTNode()) {
+			if (type == 0) {
+				curr = start;
 			}
 			child.setPostOrderList(curr);
-			if(child.getType()!=0) {
-				curr = child.pos+1;
+			if (child.getType() != 0) {
+				curr = child.pos + 1;
 			}
 			postOrderList.addAll(new ArrayList<ClassNode>(Arrays.asList(child.getPostOrderList())));
 		}
 		postOrderList.add(this);
 		PORepresentation = new ClassNode[postOrderList.size()];
 		postOrderList.toArray(PORepresentation);
-		if(type!=0) {
+		if (type != 0) {
 			pos = curr;
 		}
 	}
 
-	public ClassNode[] getPostOrderList() {
+	private ClassNode[] getPostOrderList() {
 		return PORepresentation;
 	}
 
@@ -366,14 +422,14 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 *            of the nodes to retrieve
 	 * @return
 	 */
-	public ArrayList<ClassNode> getMinimalNodesFromPostOrder(HashSet<Integer> positions, boolean removeMatches) {
+	private ArrayList<ClassNode> getMinimalNodesFromPostOrder(HashSet<Integer> positions, boolean removeMatches) {
 		return minimiseAndGet(positions, 0, removeMatches).uniqueNodes;
 	}
 
 	private MinimiseReturns minimiseAndGet(HashSet<Integer> positions, int posl, boolean removeMatch) {
 		int total = posl;
 		final ArrayList<ClassNode> classMatches = new ArrayList<>();
-		for (final ClassNode c : getChildrenAsCN()) {
+		for (final ClassNode c : getChildrenAsASTNode()) {
 			final MinimiseReturns ret = c.minimiseAndGet(positions, total, removeMatch);
 			total = ret.pos;
 			classMatches.addAll(ret.uniqueNodes);
@@ -408,7 +464,7 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 *            if true \ is printed, | is printed otherwise
 	 * @return A string representation of the tree
 	 */
-	public String print(String prefix, boolean isTail) {
+	private String print(String prefix, boolean isTail) {
 		return printMaker(prefix, isTail, false);
 	}
 
@@ -425,12 +481,12 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 *            line
 	 * @return A string representation of the tree
 	 */
-	public String print(String prefix, boolean isTail, boolean printPos) {
+	private String print(String prefix, boolean isTail, boolean printPos) {
 		return printMaker(prefix, isTail, printPos);
 	}
 
 	private String printMaker(String prefix, boolean isTail, boolean printPos) {
-		final ArrayList<ClassNode> children = getChildrenAsCN();
+		final ArrayList<ClassNode> children = getChildrenAsASTNode();
 		String str = prefix + (printPos ? pos + ":" : "") + (isTail ? "\\-- " : "|-- ") + identifier;
 		for (int i = 0; i < children.size() - 1; i++) {
 			str += "\n" + children.get(i).printMaker(prefix + (isTail ? "    " : "|   "), false, printPos);
@@ -449,12 +505,12 @@ public class ClassNode extends Node<ParserRuleContext> {
 	 *
 	 * @return the size of the node
 	 */
-	public int recalculateSize() {
+	private int recalculateSize() {
 		if (getChildren().size() == 0)
 			return 1;
 		else {
 			size = 1;
-			for (final ClassNode c : getChildrenAsCN()) {
+			for (final ClassNode c : getChildrenAsASTNode()) {
 				if (c == null) {
 					System.err.println("Cannot calculate the size of null child");
 				}
@@ -474,7 +530,11 @@ public class ClassNode extends Node<ParserRuleContext> {
 		return print("", true, false);
 	}
 
-	public boolean compareMustMatch(ClassNode c) {
+	@Override
+	public boolean compareCharactersitics(ASTNode<?> node) {
+		if (!(node instanceof ClassNode))
+			return false;
+		ClassNode c = (ClassNode) node;
 		if (mustMatch == null && c.mustMatch == null)
 			return true;
 		else if (mustMatch != null && c.mustMatch != null)
@@ -483,16 +543,26 @@ public class ClassNode extends Node<ParserRuleContext> {
 			return false;
 	}
 
+	@Override
 	public int getPostOrderPos() {
 		return pos;
 	}
 
-	public String getChildIndetifierRecursive() {
+	private String getChildIndetifierRecursive() {
 		String identifier = "";
-		for (ClassNode c : getChildrenAsCN()) {
+		for (ClassNode c : getChildrenAsASTNode()) {
 			identifier += "." + c.getIdentifier() + c.getChildIndetifierRecursive();
 		}
 		return identifier;
+	}
+
+	/**
+	 * TODO Annotate method
+	 *
+	 * @param i
+	 */
+	public void setType(int type) {
+		this.type = (byte) type;
 	}
 
 }

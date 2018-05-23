@@ -7,10 +7,15 @@ import java.util.HashMap;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.ParserRuleContext;
 
-import dif.ClassNode;
+import costmodel.CostModel;
+import dif.ASTNode;
+import distance.APTED;
 import merge.ClassNodeSkeleton;
+import merge.FunctionMappings;
 import merge.IntermdiateAST;
 import merge.MergeGroup;
+import merge.MergeThread;
+import merge.MergedFunction;
 import ref.FunctionPos;
 
 /**
@@ -18,7 +23,7 @@ import ref.FunctionPos;
  *
  * @author Rikkey Paal
  */
-public interface PluginInterface {
+public interface PluginInterface<D> {
 
 	/**
 	 * Used to identify the language used by the plugin. e.g. Java, Python
@@ -40,9 +45,9 @@ public interface PluginInterface {
 	public void parse(CharStream stream);
 
 	/**
-	 * @return a list of {@link ClassNode}'s
+	 * @return a list of {@link ASTNode}'s
 	 */
-	public ArrayList<ClassNode> getClasses();
+	public ArrayList<? extends ASTNode<D>> getClasses();
 
 	/**
 	 * Validates a given file on the system
@@ -57,7 +62,10 @@ public interface PluginInterface {
 
 	public HashMap<Class<? extends ParserRuleContext>, ResoultionPattern> getPatterns();
 
-	public PluginInterface generateInstance();
+	public PluginInterface<D> generateInstance();
+
+	public ArrayList<ArrayList<Integer>> validateMergeGroup(ArrayList<ArrayList<Integer>> groups,
+			FunctionMappings<D> mappings, ArrayList<? extends ASTNode<D>> functions);
 
 	/**
 	 * ran before the {@link MergeGroup#buildMergeFunction()} processes the
@@ -68,9 +76,9 @@ public interface PluginInterface {
 	 * @param root
 	 *            node of the {@link IntermdiateAST}
 	 */
-	public void preMerge(ClassNodeSkeleton root);
+	public void preMerge(ClassNodeSkeleton<D> root);
 
-	public void postMerge(ClassNodeSkeleton root);
+	public void postMerge(ClassNodeSkeleton<D> root);
 
 	/**
 	 * Gets the position of a function in a file
@@ -84,21 +92,68 @@ public interface PluginInterface {
 	 *            the start of the enclosing type in the file
 	 * @return the position the function appears in the file
 	 */
-	public FunctionPos getPositionInFile(ClassNode funcHead, BufferedReader in, int startPos);
+	public FunctionPos getPositionInFile(ASTNode<D> funcHead, BufferedReader in, int startPos);
 
 	/**
-	 * Pretty print the {@link ClassNode} into code, that will be inserted into
+	 * Pretty print the {@link MergedFunction} into code, that will be inserted into
 	 * the file
 	 *
-	 * @param classNode
+	 * @param root
 	 *            to convert to code
-	 * @return a textual representation of the AST inside the {@link ClassNode}
+	 * @return a textual representation of the AST inside the {@link MergedFunction}
 	 */
-	public String prettyPrint(ClassNodeSkeleton functionStructure);
+	public String prettyPrint(MergedFunction<D> root);
 
-	public int getClassStartLine(ClassNode classRoot, BufferedReader in);
+	public int getClassStartLine(ASTNode<D> classRoot, BufferedReader in);
 
-	public String genFunctionName(ArrayList<ClassNode> functions);
+	public String genFunctionName(ArrayList<ASTNode<D>> functions);
 
-	public String updateFunctionName(ClassNodeSkeleton originalRoot, ClassNodeSkeleton newRoot, int fID, String code);
+	public void startWriting();
+
+	public String insertFunction(MergedFunction<D> function, String fileContent);
+
+	public String removeFunctions(MergedFunction<D> function, String fileContent);
+
+	public String updateReferences(String currFileRep, ArrayList<MergedFunction<D>> mergedFunctios);
+
+	/**
+	 * TODO Annotate method
+	 *
+	 * @param currFileRep
+	 * @param updatedFunctions
+	 * @return
+	 */
+	public String initUpdateReferences(String currFileRep, ArrayList<MergedFunction<D>> updatedFunctions);
+
+	/**
+	 * TODO Annotate method
+	 *
+	 * @param currFileRep
+	 * @param updatedFunctions
+	 * @return
+	 */
+	public String destroyUpdateReferences(String currFileRep, ArrayList<MergedFunction<D>> updatedFunctions);
+
+	public void setMergeThread(MergeThread<D> thread);
+
+	public ASTNode<?> copyNode(ASTNode<?> node, boolean copyChildren);
+
+	public APTED<? extends CostModel<D>, D> getApted();
+
+	/**
+	 * TODO Annotate method
+	 *
+	 * @param c
+	 * @param currFileRep
+	 * @return
+	 */
+	public String updateFunctionBodies(MergedFunction<D> c, String currFileRep);
+
+	/**
+	 * TODO Annotate method
+	 *
+	 * @param currFileRep
+	 * @return
+	 */
+	public String postProcessFile(String currFileRep);
 }

@@ -1,11 +1,13 @@
-package parse.parser.java.comp;
+package parse.parser.java.visitors;
 
 import java.security.InvalidParameterException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
-import dif.ClassNode;
+import merge.MergedFunction;
 import parse.parser.java.comp.JavaParser.ArgumentsContext;
 import parse.parser.java.comp.JavaParser.ArrayCreatorRestContext;
 import parse.parser.java.comp.JavaParser.ArrayInitializerContext;
@@ -19,6 +21,7 @@ import parse.parser.java.comp.JavaParser.ClassDeclarationContext;
 import parse.parser.java.comp.JavaParser.ClassOrInterfaceModifierContext;
 import parse.parser.java.comp.JavaParser.ClassOrInterfaceTypeContext;
 import parse.parser.java.comp.JavaParser.ClassTypeContext;
+import parse.parser.java.comp.JavaParser.CompilationUnitContext;
 import parse.parser.java.comp.JavaParser.CreatedNameContext;
 import parse.parser.java.comp.JavaParser.CreatorContext;
 import parse.parser.java.comp.JavaParser.EnhancedForControlContext;
@@ -47,6 +50,7 @@ import parse.parser.java.comp.JavaParser.MethodDeclarationContext;
 import parse.parser.java.comp.JavaParser.ModifierContext;
 import parse.parser.java.comp.JavaParser.NonWildcardTypeArgumentsContext;
 import parse.parser.java.comp.JavaParser.NonWildcardTypeArgumentsOrDiamondContext;
+import parse.parser.java.comp.JavaParser.PackageDeclarationContext;
 import parse.parser.java.comp.JavaParser.ParExpressionContext;
 import parse.parser.java.comp.JavaParser.PrimaryContext;
 import parse.parser.java.comp.JavaParser.PrimitiveTypeContext;
@@ -72,6 +76,8 @@ import parse.parser.java.comp.JavaParser.VariableDeclaratorIdContext;
 import parse.parser.java.comp.JavaParser.VariableDeclaratorsContext;
 import parse.parser.java.comp.JavaParser.VariableInitializerContext;
 import parse.parser.java.comp.JavaParser.VariableModifierContext;
+import parse.parser.java.comp.JavaParserBaseVisitor;
+import parse.parser.java.misc.merge.ClassNode;
 
 /**
  * TODO Annotate class
@@ -83,6 +89,35 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 	private final boolean doRecursion;
 	private boolean doVariableInit = true;
 	private boolean doVariableDec = true;
+	private boolean doHeadParameters = true;
+	private boolean doHeadIdentifier = true;
+	private boolean doHeadModifiers = true;
+	private boolean doTrailingBrace = true;
+
+
+	/**
+	 * @param doTrailingBrace
+	 *            the doTrailingBrace to set
+	 */
+	public void setDoTrailingBrace(boolean doTrailingBrace) {
+		this.doTrailingBrace = doTrailingBrace;
+	}
+
+	/**
+	 * @param doHeadModifiers
+	 *            the doHeadModifiers to set
+	 */
+	public void setDoHeadModifiers(boolean doHeadModifiers) {
+		this.doHeadModifiers = doHeadModifiers;
+	}
+
+	public void setDoHeadParameters(boolean doHeadParameters) {
+		this.doHeadParameters = doHeadParameters;
+	}
+
+	public void setDoHeadIdentifier(boolean doHeadStart) {
+		doHeadIdentifier = doHeadStart;
+	}
 
 	/**
 	 * @return the doVariableDec
@@ -156,6 +191,13 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 		return s;
 	}
 
+	@Override
+	public String visitPackageDeclaration(PackageDeclarationContext ctx) {
+		String s = ctx.PACKAGE().getText() + " ";
+		s += visitQualifiedName(ctx.qualifiedName());
+		return s;
+	}
+
 	/*
 	 * (non-Javadoc)
 	 * @see
@@ -213,16 +255,24 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 	public String visitMethodDeclaration(MethodDeclarationContext ctx) {
 		if (ctx.methodBody().block() != null) {
 			String methodHead = "";
-			for (ModifierContext mc : ((ClassBodyDeclarationContext) ctx.getParent().getParent()).modifier()) {
-				methodHead += visitModifierAsString(mc) + " ";
+			if (doHeadModifiers) {
+				for (ModifierContext mc : ((ClassBodyDeclarationContext) ctx.getParent().getParent()).modifier()) {
+					methodHead += visitModifierAsString(mc) + " ";
+				}
+				methodHead += visitTypeTypeOrVoid(ctx.typeTypeOrVoid()).toString();
 			}
-			methodHead += visitTypeTypeOrVoid(ctx.typeTypeOrVoid()).toString();
-			methodHead += " " + ctx.IDENTIFIER().getText();
-			methodHead += visitFormalParameters(ctx.formalParameters());
-
-			if (!doRecursion)
-				return methodHead + "{";
-			else {
+			if (doHeadIdentifier) {
+				methodHead += " " + ctx.IDENTIFIER().getText();
+			}
+			if(doHeadParameters){
+				methodHead += visitFormalParameters(ctx.formalParameters());
+			}
+			if (!doRecursion) {
+				if (doTrailingBrace) {
+					methodHead += "{";
+				}
+				return methodHead;
+			} else {
 				String method = methodHead + visitMethodBody(ctx.methodBody());
 				method = method.trim();
 				return method;
@@ -643,11 +693,11 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 				s += visitStatement(ctx.statement(0));
 			}
 		} else if (ctx.DO() != null) {
-			s = ctx.DO().getText();
-			if (doRecursion) {
-				s += visitStatement(ctx.statement(0));
-			}
-			s += ctx.WHILE().getText();
+			// s = ctx.DO().getText();
+			// if (doRecursion) {
+			// s += visitStatement(ctx.statement(0));
+			// }
+			s = ctx.WHILE().getText();
 			s += visitParExpression(ctx.parExpression()) + ";";
 		} else if (ctx.WHILE() != null) {
 			s = ctx.WHILE().getText();
@@ -678,7 +728,7 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 			}
 		} else if (ctx.SWITCH() != null) {
 			s = ctx.SWITCH().getText();
-			s += visitParExpression(ctx.parExpression()) + "{";
+			s += visitParExpression(ctx.parExpression()) + "{\n";
 			for (SwitchBlockStatementGroupContext sbsgc :
 				ctx.switchBlockStatementGroup()) {
 				s += visitSwitchBlockStatementGroup(sbsgc);
@@ -854,8 +904,9 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 		for (SwitchLabelContext slc : ctx.switchLabel()) {
 			s += visitSwitchLabel(slc) + "\n";
 		}
+		s += "\t";
 		for (BlockStatementContext bsc : ctx.blockStatement()) {
-			s += visitBlockStatement(bsc);
+			s += visitBlockStatement(bsc).replaceAll("\n", "\n\t");
 		}
 		return s;
 	}
@@ -871,7 +922,7 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 		if (ctx.DEFAULT() != null) {
 			s += ctx.DEFAULT().getText() + ":";
 		} else {
-			s += ctx.CASE().getText();
+			s += ctx.CASE().getText() + " ";
 			if (ctx.expression() != null) {
 				s += visitExpression(ctx.expression());
 			} else {
@@ -1001,8 +1052,10 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 				if (ctx.getChild(i) instanceof ExpressionContext) {
 					s += visitExpression((ExpressionContext) ctx.getChild(i));
 				} else if (ctx.getChild(i) instanceof TerminalNode) {
-					s = s.trim();
 					s += ((TerminalNode) ctx.getChild(i)).getText();
+					if (!s.endsWith("(") && !s.endsWith(")")) {
+						s += " ";
+					}
 				} else if (ctx.getChild(i) instanceof ExpressionListContext) {
 					s += visitExpressionList((ExpressionListContext) ctx.getChild(i));
 				} else if (ctx.getChild(i) instanceof CreatorContext) {
@@ -1444,6 +1497,162 @@ public class PrettyPrinter extends JavaParserBaseVisitor<String> {
 			str = "strictfp";
 		}
 		return str;
+	}
+
+	/**
+	 * TODO Annotate method
+	 * @param rootNode
+	 * @return
+	 */
+	public String getDefaultReturns(MergedFunction rootNode) {
+		MethodDeclarationContext ctx = (MethodDeclarationContext) rootNode.getRootNode().getNode().getNodeData();
+		return getDefaultValue(visitTypeTypeOrVoid(ctx.typeTypeOrVoid()));
+	}
+
+	public String getDefaultValue(String type) {
+		switch (type.toLowerCase()) {
+			case "boolean":
+				return "false";
+			case "char":
+				return "'\\u0000'";
+			case "byte":
+			case "short":
+			case "int":
+				return "0";
+			case "long":
+				return "0L";
+			case "float":
+				return "0.0f";
+			case "double":
+				return "0.0d";
+			case "void":
+				return "void";
+			default:
+				return "null";
+		}
+	}
+
+	public String getNodePath(ParserRuleContext ctx) {
+		String path = "";
+		ParserRuleContext curCtx = ctx;
+		while (curCtx.getParent() != null) {
+			if (curCtx instanceof ClassDeclarationContext) {
+				path = "$" + ((ClassDeclarationContext) curCtx).IDENTIFIER().getText() + path;
+			}
+			curCtx = curCtx.getParent();
+		}
+		if (path.length() > 0) {
+			path = path.substring(1);
+		}
+		if (((CompilationUnitContext) curCtx).packageDeclaration() != null) {
+			path = visit(((CompilationUnitContext) curCtx).packageDeclaration().qualifiedName()) + "." + path;
+		}
+
+		return path;
+	}
+
+	public String getNodeName(ParserRuleContext ctx) {
+		String path = getNodePath(ctx);
+		if (ctx instanceof MethodDeclarationContext) {
+			MethodDeclarationContext meth = (MethodDeclarationContext) ctx;
+			path += "." + meth.IDENTIFIER().getText() + "(";
+			if (meth.formalParameters() != null) {
+				path += printParameterListTypes(meth.formalParameters());
+			}
+			path += ")";
+		}
+		return path;
+	}
+
+	public ArrayList<String[]> getParameterList(FormalParametersContext parameters) {
+		ArrayList<String[]> retList = new ArrayList<>();
+		if (parameters.formalParameterList() != null) {
+			FormalParameterListContext parameterList = parameters.formalParameterList();
+
+			if (parameterList.formalParameter() != null) {
+				for (FormalParameterContext fP : parameterList.formalParameter()) {
+					retList.add(new String[] { visit(fP.typeType()), visit(fP.variableDeclaratorId()) });
+				}
+			}
+			if (parameterList.lastFormalParameter() != null) {
+				LastFormalParameterContext lFPC = parameterList.lastFormalParameter();
+				retList.add(new String[] { "... " + visit(lFPC.typeType()), visit(lFPC.variableDeclaratorId()) });
+			}
+		}
+		return retList;
+	}
+
+	public String printParameterListTypes(FormalParametersContext parameters) {
+		String retStr = "";
+		if (parameters.formalParameterList() != null) {
+			for (FormalParameterContext ctx : parameters.formalParameterList().formalParameter()) {
+				retStr += visitTypeType(ctx.typeType()) + ",";
+			}
+			if (parameters.formalParameterList().lastFormalParameter() != null) {
+				retStr += visitTypeType(parameters.formalParameterList().lastFormalParameter().typeType()) + ",";
+			}
+			if (retStr.length() > 0) {
+				retStr = retStr.substring(0, retStr.length() - 1);
+			}
+		}
+		return retStr;
+	}
+
+	public String printParameterListNames(FormalParametersContext parameters) {
+		String retStr = "";
+		if (parameters.formalParameterList() != null) {
+			for (FormalParameterContext ctx : parameters.formalParameterList().formalParameter()) {
+				retStr += ctx.variableDeclaratorId().IDENTIFIER().getText() + ",";
+			}
+			if (parameters.formalParameterList().lastFormalParameter() != null) {
+				retStr += parameters.formalParameterList().lastFormalParameter().variableDeclaratorId().IDENTIFIER()
+						.getText() + ",";
+			}
+			if (retStr.length() > 0) {
+				retStr = retStr.substring(0, retStr.length() - 1);
+			}
+		}
+		return retStr;
+	}
+
+	public String getPath(ParserRuleContext ctx) {
+		String path = "";
+
+		return path;
+	}
+
+	public int getVisibility(List<ModifierContext> list) {
+		int visibility = 1;
+		for(ModifierContext mctx: list) {
+			if (mctx.classOrInterfaceModifier() != null) {
+				int i = getVisibility(mctx.classOrInterfaceModifier());
+				if (i != -1) {
+					visibility = i;
+				}
+			}
+		}
+		return visibility;
+	}
+
+	private int getVisibility(ClassOrInterfaceModifierContext ctx) {
+		if (ctx.PUBLIC() != null)
+			return 3;
+		else if (ctx.PROTECTED() != null)
+			return 2;
+		else if (ctx.PRIVATE() != null)
+			return 0;
+		else
+			return -1;
+	}
+
+	/**
+	 * TODO Annotate method
+	 *
+	 * @param nodeData
+	 * @return
+	 */
+	public String visitLocalVariableDeclarationNoInit(LocalVariableDeclarationContext nodeData) {
+		return visit(nodeData.variableDeclarators()) + ";";
 	}
 
 }
