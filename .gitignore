@@ -5,3 +5,11 @@ bin/
 
 \.classpath
 \.settings/
+
+src/TODO\.txt
+
+src/RefUpdateAlgorithm
+
+Test/
+
+lib/
