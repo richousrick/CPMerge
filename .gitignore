@@ -13,3 +13,4 @@ src/RefUpdateAlgorithm
 Test/
 
 lib/
+/target/
