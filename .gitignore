@@ -1,16 +1,6 @@
-
-bin/
-
-\.project
-
-\.classpath
-\.settings/
-
-src/TODO\.txt
-
-src/RefUpdateAlgorithm
-
-Test/
-
-lib/
+# Intellij
+.idea/
 /target/
+
+# Misc
+/testcode/
